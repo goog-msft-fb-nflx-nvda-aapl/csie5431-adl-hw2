@@ -52,3 +52,18 @@ Observations (measured): BM25 beats every zero-shot dense model at R@1/R@10/MRR@
 Hybrid beats BM25 only at R@50/R@100 (qwen3 hybrid R@100 0.948 vs 0.915) and ties it at
 R@10 for qwen3. Seen vs unseen gold R@10 differ by <=2 points for every method. Not yet
 measured: judge-graded metrics, fine-tuned models, any reranker, 3070 timing, train split.
+
+## 2026-10-05 — Perplexity survey intake
+
+`docs/survey/perplexity_survey_1.md` saved (pre-signed attachment URLs in its citations
+stripped). Folded into `docs/TODO.md` as backlog items 14-18. Nothing in it is measured
+by us. Points of agreement with the Claude/Gemini surveys: BM25 + dense RRF first stage,
+fine-tuned Qwen3-Embedding-0.6B as the main dense candidate, cross-encoder rerank on
+top ~50, product-disjoint dev split, full-dialogue queries, cached MNRL, conservative
+hard-negative filtering. Points of difference: it recommends cross-encoder/ms-marco-
+MiniLM-L6-v2 as the primary reranker and mxbai-embed-large-v1 as the safe dense
+fallback; it advises against Qwen2.5-1.5B as an online reranker (offline teacher only)
+while the Claude survey recommends judge-prompt pointwise rerank on the top 10-20. Its
+claim that the Qwen judge is nondeterministic does not match `evaluate.py` (greedy
+decode, `CUBLAS_WORKSPACE_CONFIG` set); the rerank-vs-teacher question is open until
+tested. Model sizes/context lengths and the cited arXiv/HF pages are unverified by us.

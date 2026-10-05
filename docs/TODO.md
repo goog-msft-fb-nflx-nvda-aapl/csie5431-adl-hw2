@@ -5,10 +5,12 @@
 - [x] Spec read + consolidated (`docs/spec/spec.md`), PDF-verified against the Qwen OCR.
 - [x] Data downloaded (`data/train`, `data/public`), EDA done (`docs/EDA.md`).
 - [x] Repo + `CLAUDE.md` set up.
-- [ ] Deep-research survey prompt (SOTA retrieval/reranking methods, HF models/datasets,
-      what ablations, what visualizations/analysis) — in progress, see `docs/survey/`.
-- [ ] Run the survey externally (Claude/Gemini/Perplexity), synthesize responses into a
-      numbered backlog (same pattern as HW1's round-2 backlog).
+- [x] Deep-research survey prompt, see `docs/survey/`.
+- [x] Survey run on Claude + Gemini + Perplexity, synthesized into the method backlog
+      below.
+- [x] Zero-shot baselines on public (BM25, bge-base, qwen3-0.6b, bge-m3, hybrids), see
+      `docs/WORKLOG.md`. Script `code/zs_eval.py` is an analysis script, not yet a
+      `retrieve_and_rerank()`.
 - [ ] Baseline `retrieve_and_rerank()` implementation (something simple that runs
       end-to-end through `retrieval.py` + `evaluate.py` first, before optimizing).
 - [ ] Training-data construction strategy for a bi-encoder/reranker (anchor = query,
@@ -29,7 +31,7 @@
 
 All throughput/latency/benchmark numbers in the surveys are unmeasured estimates or
 unverified citations; nothing below is adopted until measured here. Perplexity response
-not yet run.
+run (Claude, Gemini, Perplexity responses all in `docs/survey/`).
 
 Measure first:
 1. Benchmark encode throughput + rerank pairs/s on the 8GB target (or a proxy) for
@@ -64,6 +66,25 @@ Candidate methods:
     label source for cross-encoder training.
 12. Query-side: HyDE / conversation rewrite with Qwen2.5-1.5B (about 1k generations).
 13. ESCI external data (Substitute labels as graded positives) for reranker pretraining.
+
+From the Perplexity survey (not in the other two):
+14. Extra baselines: `mixedbread-ai/mxbai-embed-large-v1` (dense, 512 tokens) and
+    `cross-encoder/ms-marco-MiniLM-L6-v2` (22.7M) as the cheap reranker, fine-tuned;
+    first rerank-depth sweep on MiniLM before trying 0.6B rerankers.
+15. Staged negative schedule: in-batch only first, then mine BM25 + base-dense top-50,
+    filter with a reranker margin / duplicate-title check, then 1-2 hard negatives per
+    query; re-mine at most once. Prefer same-category negatives.
+16. Qwen2.5-1.5B as offline teacher only (keep high-scoring candidates out of the
+    negatives, distill medium scores into the reranker). Conflicts with item 11 (online
+    judge-prompt rerank); test both, the surveys disagree.
+17. Selective chunking only for overlength passages with max-over-chunks aggregation;
+    late chunking / ColBERT (`lightonai/colbertv2.0`, `jinaai/jina-colbert-v2`) as
+    ablations only.
+18. Report extras: rank-transition table (where reranking moves the first relevant item),
+    error taxonomy on 10-20 sampled public errors, per-category plots.
+Selection rule from that survey, adopt unless contradicted: choose by public judge-graded
+MRR@10, then Recall@10, unseen-target MRR@10, and measured 3070 latency; if reranking does
+not improve graded MRR@10 over RRF, ship RRF only.
 
 Needs a ruling before use:
 - BLaIR (`hyp1231/blair-*`) and Amazon-C4 are pretrained/built on Amazon Reviews 2023,
