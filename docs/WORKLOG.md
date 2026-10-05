@@ -326,3 +326,39 @@ not predict what a real 3070 would pick. The 3070 itself is still unmeasured.
 FLOP-based estimate (interpretation, not measured): dense 0.44B non-embedding params ~0.9 GFLOP/token,
 75k passages at 384 tokens (mean 333 after truncation) ~22 PFLOP; rerank 30k pairs of ~650 tokens ~18
 PFLOP; at 15-25 TFLOPS achieved on a 3070 this is 25-45 minutes total, so the guard matters.
+
+## 2026-10-06 — Q2 generation analysis on the final retrieval lists (exp 14)
+
+`code/q2_generate.py` on `results/e2e_final_default.json` (final pipeline), 10 public dialogues
+(seed 1) x 3 prompts, top-3 retrieved specs, greedy, Qwen2.5-1.5B-Instruct. Outputs
+`results/q2_final.jsonl` (earlier 8-sample run on an older list: `results/q2.jsonl`). Gold was the
+rank-1 retrieved item in 9 of 10 dialogues (rank 2 for the Old Spice deodorant request, where rank 1 was
+Speed Stick). Surface counts over 10 samples per prompt (plain / grounded / checklist): mean words
+96 / 56 / 69; names the rank-1 title 8 / 8 / 7; invents a URL 1 / 1 / 0; "Not confirmed: None ..." non-answer
+0 / 0 / 4. The checklist "numbers not in specs" count (4) is inflated by its own numbered requirement
+lists, not by hallucinated facts, so it is not a hallucination rate.
+
+Observed cases (all from `q2_final.jsonl`):
+- beauty-000138 (no-lamp French nails): plain ignored the rank-1 acrylic powder and recommended a
+  different candidate (Makartt nail tips) and described its sizes, i.e. it did not follow the best-first
+  order; grounded named the right product but wrote "last up to two weeks", a duration the user asked
+  for and the spec was not checked to support; checklist recommended the right product.
+- beauty-000065 (Merkur razor, deodorant stick; gold at rank 2): all three prompts recommended the
+  rank-1 Speed Stick; grounded fabricated a link and a product variant ("Regular 3 oz (Pack of 2)",
+  not in the specs); checklist listed requirements the user never stated ("Cleanser", "Aluminum-free").
+- toys-000068 (shaped St. Patrick's puzzle): checklist listed "Standard rectangular shape" although the
+  user asked for a shaped puzzle, then still recommended the shaped puzzle; plain and grounded were
+  correct and grounded added the spec-stated "ages 15 and up".
+- pet-supplies-000183 and home-and-kitchen-000062 (floppy dog toy; tablecloth clips): all three prompts
+  produced accurate, spec-supported answers; plain was longest and added unsupported colour/size
+  assurances ("medium-sized dog", "smooth edges protect scratches" from the spec) in some sentences.
+- sports-000180 (hidden handgun mount): checklist's "Not confirmed" line claimed the spec does not
+  mention discreet mounting or fast access although the user's discreet requirement is exactly what
+  the product title says ("Concealed Holder"), i.e. the verification step was wrong.
+- pet-supplies-000108 (whitefish cat food): plain added a fabricated product URL and "trusted since 2017".
+
+Interpretation (not measured beyond these 10 samples): the 1.5B model follows the "recommend the first
+candidate and use only the spec" instruction best under the short grounded prompt; the explicit
+checklist prompt produced structured output but the "not confirmed" step was either empty or wrong in
+most samples, and added requirements the user did not state; the plain prompt gave the longest answers
+and the most unsupported details. No human or judge rating of faithfulness was done.
