@@ -1,0 +1,13 @@
+.DS_Store
+*.zip
+*.tar.gz
+__pycache__/
+*.pyc
+data/
+results/
+*.pt
+*.bin
+*.safetensors
+models/
+checkpoints/
+.env
