@@ -304,3 +304,25 @@ dense 256 tokens, rerank depth 20, 1200 chars/doc: R@10 0.970, MRR@10 0.880, ret
 More variants: ftG (3 hard negatives from ranks 0..20 with judge-accepted ones removed, lr 2e-5, 3 ep)
 dense R@10 0.910 / MRR@10 0.762, no better than ftD / ftF (0.912 / 0.760, 0.920 / 0.772).
 Reranker R4 (R2 with 2 epochs): ftB shortlist d30 exact 0.936 / 0.847 (R2 0.938 / 0.843).
+
+## 2026-10-06 — Wall-clock guard in retrieval_utils.py (exp 13)
+
+Risk: the 3070 is slower than the H200 by an unmeasured factor and the 1 hour limit is hard. Added
+to `retrieve_and_rerank()`: (1) before encoding the pool it times a 1,000-passage sample at the
+longest length, projects the whole pool and lowers the max token length (512 -> 384 -> 256 -> 192 ->
+128) until the projection fits `DENSE_SHARE` (45%) of `HW2_BUDGET` (default 3000s); (2) the reranker
+works 16 queries at a time and recomputes, from its measured pairs/s and the time left (budget minus
+300s safety), how many shortlist items per query it can still afford, falling back to the first-stage
+order when out of time. On the H200 with the default budget the guard changes nothing.
+
+Tests (ftD dense + BM25 + R2 reranker, public, official judge, shared H200):
+| setting | dense max_len chosen | rerank depth | retrieval time | peak VRAM | graded R@10 | graded MRR@10 |
+|---|---|---|---|---|---|---|
+| HW2_BUDGET=500 (simulated slow machine) | 256 | 3-5 per query (4,376 pairs) | 202s | 4.07GB | 0.950 | 0.855 |
+| budget 3000, length cap 384 | 384 | 30 (30,000 pairs) | 402s | 4.44GB | 0.979 | 0.895 |
+
+The 500s run shows the guard produces a valid ranking inside the budget with reduced depth; it does
+not predict what a real 3070 would pick. The 3070 itself is still unmeasured.
+FLOP-based estimate (interpretation, not measured): dense 0.44B non-embedding params ~0.9 GFLOP/token,
+75k passages at 384 tokens (mean 333 after truncation) ~22 PFLOP; rerank 30k pairs of ~650 tokens ~18
+PFLOP; at 15-25 TFLOPS achieved on a 3070 this is 25-45 minutes total, so the guard matters.
