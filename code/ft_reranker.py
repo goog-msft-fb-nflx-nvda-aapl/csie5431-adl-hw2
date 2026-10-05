@@ -86,8 +86,9 @@ for ep in range(a.epochs):
             continue
         texts = [fmt(qs[i]["query"], p) for i, g in groups for p in g]
         enc = tok(texts, return_tensors="pt", padding=True, truncation=True, max_length=a.max_len).to("cuda")
-        lg = model(**enc).logits[:, -1, :].float()
-        sc = (lg[:, yes] - lg[:, no]).view(len(groups), a.group)
+        h = model.model(**enc).last_hidden_state[:, -1, :]
+        lg = (h @ model.lm_head.weight[[yes, no]].T).float()
+        sc = (lg[:, 0] - lg[:, 1]).view(len(groups), a.group)
         loss = torch.nn.functional.cross_entropy(sc, torch.zeros(len(groups), dtype=torch.long, device="cuda"))
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)

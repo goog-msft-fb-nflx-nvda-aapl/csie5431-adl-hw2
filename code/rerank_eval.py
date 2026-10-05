@@ -56,8 +56,10 @@ def score_qwen3rr(queries_per_pair, docs, bs, max_len, model_id="Qwen/Qwen3-Rera
         enc = tok([texts[i] for i in idx], return_tensors="pt", padding=True, truncation=True,
                   max_length=max_len).to("cuda")
         with torch.inference_mode():
-            lg = m(**enc).logits[:, -1, :].float()
-        out[idx] = (lg[:, t_id] - lg[:, f_id]).cpu().numpy()
+            h = m.model(**enc).last_hidden_state[:, -1, :]
+            w = m.lm_head.weight[[t_id, f_id]]
+            lg = (h @ w.T).float()
+        out[idx] = (lg[:, 0] - lg[:, 1]).cpu().numpy()
     return out
 
 

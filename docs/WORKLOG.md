@@ -192,3 +192,16 @@ but sometimes dropped the title ("[1] because ...") and wrote "None of the requi
 explicitly stated" under Not confirmed, i.e. the model did not do the verification the prompt asked
 for. These are 8 samples and counts of surface features, not a hallucination rate; no human or judge
 scoring has been done yet.
+
+## 2026-10-06 — Qwen3-Reranker-0.6B cost knobs (exp 6), zero-shot candidates, exact-ID
+
+Depth 30 over the zero-shot hybrid shortlist, `--doc-chars` truncation (R@10 / MRR@10, H200, bs 32,
+before the memory fix below): 600 chars 0.822 / 0.622 (127s, 30k pairs); 1000 chars 0.859 / 0.697
+(164s); 1400 chars 0.867 / 0.717 (201s); 1800 chars 0.873 / 0.717 (earlier run). Depth by 1800 chars:
+d10 0.762 / 0.662, d20 0.837 / 0.700, d30 0.873 / 0.717, d50 0.886 / 0.723.
+
+Memory: my first scorer ran the full LM head over every position, peak 9.4-13.4GB allocated on the
+H200 at bs 32 (would not fit 8GB). Changed `score_qwen3rr` (and the training script) to take the last
+hidden state and multiply by only the yes/no rows of `lm_head`: peak 3.33GB allocated at bs 16,
+30k pairs / 1800 chars in 166s on the H200 (scores match the old path to ~3 decimals, depth-10
+MRR@10 0.663 vs 0.662). 3070 time still unmeasured.
