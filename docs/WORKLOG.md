@@ -288,3 +288,19 @@ reranker = `rrR2_alt50`. Public 1,000 queries / 75k pool, official judge. H200 s
 ftF (3 hard negatives, lr 2e-5, 3 ep): dense R@10 0.920 / MRR@10 0.772 (ftD 0.912 / 0.760).
 Reranker R3 (accepted alternative as the positive in every group): ftB shortlist d30 exact 0.936 /
 0.829, zero-shot shortlist 0.885 / 0.799, i.e. below R1 and R2 on MRR@10.
+
+## 2026-10-06 — Length / depth cost knobs end to end, more variants (exp 12)
+
+ftD dense at inference length (public exact-ID R@10 / MRR@10 / R@100; pool encode seconds on a shared
+H200): 256 tokens 0.894 / 0.731 / 0.981 (153s); 384: 0.907 / 0.756 / 0.985 (210s); 512: 0.912 / 0.760 /
+0.985. Token stats of public passages with the Qwen3 tokenizer (3,000 sampled): mean 433, median 427,
+p90 682; mean tokens after truncation to 512/384/256 = 391/333/240.
+
+End to end via `retrieval.py` + `evaluate.py` (ftD dense + BM25 RRF + R2 reranker; graded):
+dense 256 tokens, rerank depth 20, 1200 chars/doc: R@10 0.970, MRR@10 0.880, retrieval 226s
+(dense stage 126s, bm25 +8s, rerank 90s). For comparison full setting (512 / depth 30 / 1800 chars):
+0.977 / 0.891 in 412s. Costs were measured on a shared H200, not on the 3070.
+
+More variants: ftG (3 hard negatives from ranks 0..20 with judge-accepted ones removed, lr 2e-5, 3 ep)
+dense R@10 0.910 / MRR@10 0.762, no better than ftD / ftF (0.912 / 0.760, 0.920 / 0.772).
+Reranker R4 (R2 with 2 epochs): ftB shortlist d30 exact 0.936 / 0.847 (R2 0.938 / 0.843).
