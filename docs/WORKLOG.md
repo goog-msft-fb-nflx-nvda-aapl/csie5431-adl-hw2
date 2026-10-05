@@ -205,3 +205,31 @@ H200 at bs 32 (would not fit 8GB). Changed `score_qwen3rr` (and the training scr
 hidden state and multiply by only the yes/no rows of `lm_head`: peak 3.33GB allocated at bs 16,
 30k pairs / 1800 chars in 166s on the H200 (scores match the old path to ~3 decimals, depth-10
 MRR@10 0.663 vs 0.662). 3070 time still unmeasured.
+
+## 2026-10-06 — Fine-tuned bi-encoder + zero-shot Qwen3-Reranker, graded (exp 7)
+
+Pipeline: BM25 + `ftB_hn1` Qwen3-Embedding-0.6B (RRF, k=60) top-100 -> zero-shot Qwen3-Reranker-0.6B on
+top 30 (1800 chars/doc, bs 16) -> top 10. Public, H200 GPU0.
+
+| stage | exact R@10 | exact MRR@10 | graded R@10 | graded MRR@10 |
+|---|---|---|---|---|
+| BM25 + zero-shot qwen3 RRF (exp "baseline v0") | 0.762 | 0.530 | 0.877 | 0.646 |
+| BM25 + zero-shot qwen3 RRF -> qwen3 reranker d30 | 0.873 | 0.717 | 0.938 | 0.803 |
+| BM25 + ftB RRF | 0.891 | 0.719 | not run | not run |
+| BM25 + ftB RRF -> qwen3 reranker d30 | 0.920 | 0.745 | 0.960 | 0.824 |
+
+ftB hybrid exact recall@10/30/50/100/200: 0.891 / 0.953 / 0.965 / 0.981 / 0.981. Reranker scoring 170s
+for 30k pairs, peak 3.34GB (H200). The graded 0.960 / 0.824 is above the spec's public Boss
+thresholds (0.950 / 0.800) on both public numbers; private numbers are not measurable. Exact R@10 by
+seen / unseen gold at d30: 0.912 / 0.928; MRR@10 0.733 / 0.758. These are single runs, no seed
+variance measured, and the judge-graded number was measured once.
+
+## 2026-10-06 — Judge labels on train candidates (exp 8, supervision for the reranker)
+
+`code/judge_labels.py`: the official `evaluate.LLMJudge` (gold as reference) over the top-20 zero-shot
+hybrid candidates of all 4,830 train dialogues, 93,197 judgments, 0 parse failures. Judge accepted
+8.1% of non-gold candidates; 54.3% of dialogues have at least one judge-accepted non-gold product in
+their top 20. Saved `cache/judge_train.npy` (1 accept, 0 reject, 2 gold). Reranker fine-tuning
+(`code/ft_reranker.py`: listwise softmax CE, 1 positive + 7 judge-rejected negatives, lr 1e-5,
+1 epoch, 4,344 train dialogues, product-disjoint 10% dev held out) is running for gold-only
+positives (R1) and gold-or-accepted-alternative positives at probability 0.5 (R2).
