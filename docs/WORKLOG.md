@@ -261,3 +261,15 @@ dialogues, ~15 min on a shared H200): public exact-ID with depth-30 rerank:
 
 R1 over ftB hybrid depth 20 / 10: 0.924 / 0.828, 0.891 / 0.818. Judge-graded (official `evaluate.py`)
 for ftB hybrid + R1 d30: graded R@10 0.975, graded MRR@10 0.883.
+
+## 2026-10-06 — Reranker R2, ftE (exp 10)
+
+ftE (negatives from hybrid ranks 0..30, 1 per query, lr 1e-5, 2 ep): dense R@10 0.876 / MRR@10 0.699,
+hybrid 0.895 / 0.732 (ftB with ranks 5..50: 0.878 / 0.694, 0.891 / 0.725); no clear difference at this
+single-seed resolution.
+
+Reranker R2 (as R1 but the positive in each group is a random judge-accepted alternative with
+probability 0.5, otherwise the gold; everything else identical). Public exact-ID, depth 30:
+zero-shot hybrid shortlist 0.887 / 0.813 (R1 0.886 / 0.805); ftB shortlist 0.938 / 0.843 (R1 0.938 /
+0.835), depth 20 0.922 / 0.840, depth 10 0.891 / 0.822. Judge-graded on ftB shortlist d30: R@10 0.972,
+MRR@10 0.890 (R1: 0.975 / 0.883). R1 vs R2 differ by under 1 point on every number, single seed each.

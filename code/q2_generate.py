@@ -11,7 +11,7 @@ import sys
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "provided"))
+sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 from eval_utils import load_eval_queries, load_products  # noqa: E402
 
 PROMPTS = {

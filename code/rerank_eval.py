@@ -10,7 +10,7 @@ import time
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "provided"))
+sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 from eval_utils import load_eval_queries, load_products  # noqa: E402
 
 JUDGE_SYS = ("You are a product-relevance evaluator optimized for recall. Decide whether the "
@@ -113,7 +113,7 @@ def main():
     ap.add_argument("--cands", default="")
     a = ap.parse_args()
 
-    root = os.path.join(os.path.dirname(__file__), "..", "data")
+    root = os.environ.get("HW2_DATA", "data")
     qs = load_eval_queries(f"{root}/{a.split}/dialogues.jsonl")
     prods = load_products(f"{root}/{a.split}/products.jsonl")
     train_pids = set(load_products(f"{root}/train/products.jsonl"))

@@ -14,7 +14,7 @@ from sentence_transformers import SentenceTransformerTrainingArguments as Args
 from sentence_transformers.losses import CachedMultipleNegativesRankingLoss
 from sentence_transformers.training_args import BatchSamplers
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "provided"))
+sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 from eval_utils import load_eval_queries, load_products  # noqa: E402
 
 ap = argparse.ArgumentParser()
@@ -34,7 +34,7 @@ ap.add_argument("--synth", default="")  # optional jsonl of {"query","pid"} extr
 ap.add_argument("--judge-filter", default="")  # npy bool [nq, depth] True = judge accepts (drop)
 a = ap.parse_args()
 
-root = os.path.join(os.path.dirname(__file__), "..", "data")
+root = os.environ.get("HW2_DATA", "data")
 qs = load_eval_queries(f"{root}/train/dialogues.jsonl")
 prods = load_products(f"{root}/train/products.jsonl")
 c = dict(np.load("cache/cands_train.npz"))

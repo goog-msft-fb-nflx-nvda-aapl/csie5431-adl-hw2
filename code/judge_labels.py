@@ -7,7 +7,7 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "provided"))
+sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 import evaluate as ev  # noqa: E402
 from eval_utils import build_eval_query, load_eval_queries, load_products  # noqa: E402
 
@@ -18,7 +18,7 @@ ap.add_argument("--n", type=int, default=20)
 ap.add_argument("--bs", type=int, default=32)
 ap.add_argument("--limit", type=int, default=0)
 a = ap.parse_args()
-root = os.path.join(os.path.dirname(__file__), "..", "data")
+root = os.environ.get("HW2_DATA", "data")
 qs = load_eval_queries(f"{root}/{a.split}/dialogues.jsonl")
 prods = load_products(f"{root}/{a.split}/products.jsonl")
 c = dict(np.load(f"cache/cands_{a.split}{a.cands}.npz"))

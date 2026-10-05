@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "provided"))
+sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 from eval_utils import load_eval_queries, load_products  # noqa: E402
 
 ap = argparse.ArgumentParser()
@@ -34,7 +34,7 @@ PREFIX = ("<|im_start|>system\nJudge whether the Document meets the requirements
           "the Instruct provided. Note that the answer can only be \"yes\" or \"no\".<|im_end|>\n<|im_start|>user\n")
 SUFFIX = "<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n"
 
-root = os.path.join(os.path.dirname(__file__), "..", "data")
+root = os.environ.get("HW2_DATA", "data")
 qs = load_eval_queries(f"{root}/train/dialogues.jsonl")
 prods = load_products(f"{root}/train/products.jsonl")
 c = dict(np.load("cache/cands_train.npz"))
