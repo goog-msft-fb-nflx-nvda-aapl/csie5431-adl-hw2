@@ -362,3 +362,8 @@ candidate and use only the spec" instruction best under the short grounded promp
 checklist prompt produced structured output but the "not confirmed" step was either empty or wrong in
 most samples, and added requirements the user did not state; the plain prompt gave the longest answers
 and the most unsupported details. No human or judge rating of faithfulness was done.
+
+BM25 ablation in the final configuration (dense_final + reranker_final, both trained on all 4,830 train
+dialogues, `retrieval.py` + `evaluate.py`, public): with BM25 fusion graded R@10 0.977 / MRR@10 0.887
+(448s); dense only 0.969 / 0.873 (448s). dense_final = ftF recipe (3 hard negatives, lr 2e-5, 3 ep),
+reranker_final = R2 recipe (alt-prob 0.5, lr 1e-5, 1 ep). Peak VRAM 3.45GB.

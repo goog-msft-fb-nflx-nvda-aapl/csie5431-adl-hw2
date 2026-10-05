@@ -66,6 +66,6 @@ for ax, d, t in ((axs[0], cat, "per category"), (axs[1], seen, "seen vs unseen g
     ax.bar([i - .2 for i in range(len(names))], [sum(a for a, _ in d[n]) / len(d[n]) for n in names], .4, label="exact R@10")
     ax.bar([i + .2 for i in range(len(names))], [sum(b for _, b in d[n]) / len(d[n]) for n in names], .4, label="exact MRR@10")
     ax.set_xticks(range(len(names))); ax.set_xticklabels([f"{n}\n(n={len(d[n])})" for n in names], fontsize=6)
-    ax.set_title(t, fontsize=9); ax.set_ylim(0, 1); ax.legend(fontsize=7)
+    ax.set_title(t, fontsize=9); ax.set_ylim(0, 1.15); ax.legend(fontsize=7, loc="upper right", ncol=2)
 plt.tight_layout(); plt.savefig("figures/category_seen.png", dpi=160)
 print("figures written")
