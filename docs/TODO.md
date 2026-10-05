@@ -11,8 +11,9 @@
 - [x] Zero-shot baselines on public (BM25, bge-base, qwen3-0.6b, bge-m3, hybrids), see
       `docs/WORKLOG.md`. Script `code/zs_eval.py` is an analysis script, not yet a
       `retrieve_and_rerank()`.
-- [ ] Baseline `retrieve_and_rerank()` implementation (something simple that runs
-      end-to-end through `retrieval.py` + `evaluate.py` first, before optimizing).
+- [~] Baseline `retrieve_and_rerank()` (BM25 + zero-shot Qwen3-0.6B, RRF) written in
+      `retrieval_utils.py`; judge-graded `evaluate.py` run in progress (tmux `eval1` on
+      gsm-gpu2), results go in `docs/WORKLOG.md`.
 - [ ] Training-data construction strategy for a bi-encoder/reranker (anchor = query,
       positive = gold + judge-acceptable alternatives if obtainable, negative sampling
       strategy — in-batch, hard negatives from BM25/dense-retrieval misses, etc.) —
@@ -38,8 +39,9 @@ Measure first:
    bge-base, Qwen3-Embedding-0.6B, bge-m3 with plain transformers/sentence-transformers,
    fp16, length-sorted batching. Surveys disagree by ~2x on encode time; this sets
    passage max length and rerank depth.
-2. Check what packages the fixed test env actually has (vLLM? bm25s? faiss?) before
-   planning around any of them.
+2. [done 2026-10-06, see worklog] Test env packages: spec lets us add packages as long as
+   they are listed in `requirements.txt`; no vLLM/bm25s in the recommended set. Our BM25
+   uses scikit-learn + scipy (added to `requirements.txt`).
 3. Zero-shot baselines through `retrieval.py` + `evaluate.py`: BM25, bge-base,
    Qwen3-Embedding-0.6B, bge-m3, gte-Qwen2-1.5B, plus jina-v5 / others if they load.
    Report exact-ID recall and judge-graded recall side by side.

@@ -91,3 +91,18 @@ below BM25 alone (0.765). No advantage from Amazon-domain pretraining shows up i
 zero-shot setting. The large-model result being worse than base is unexplained; fp16 or
 pooling/format mismatch not ruled out, not investigated. Decision: drop BLaIR from the
 candidate list unless fine-tuning comparisons later give a reason to revisit.
+
+## 2026-10-06 — Test-env packages (backlog item 2) + first end-to-end baseline
+
+Item 2: `docs/spec/spec.md` says Python 3.12.9, recommended packages (transformers 4.56.1,
+torch 2.8.0, faiss-gpu-cu12 1.12.0, sentence-transformers 5.1.0, accelerate, huggingface_hub),
+and that other packages may be used if listed in `requirements.txt`. No vLLM or bm25s in the
+recommended set, so I did not plan around them. The BM25 here uses scikit-learn + scipy (scikit-learn
+added to `requirements.txt`; scipy comes with sentence-transformers). Whether the graders
+actually `pip install` extras from our `requirements.txt` is not stated in the spec, unverified.
+GPU env `adl_hw2_env` is Python 3.10, not 3.12.9.
+
+Baseline v0: `retrieve_and_rerank()` in `retrieval_utils.py` = BM25 + zero-shot
+Qwen3-Embedding-0.6B (fp16, 512 tokens, query prompt), RRF k=60, top 10. Running through
+`provided/retrieval.py` then `provided/evaluate.py --batch-size 8` on public (gsm-gpu2 GPU2,
+tmux `eval1`, log `/home/jtan/adl_hw2/eval1.log`). Results: pending.
