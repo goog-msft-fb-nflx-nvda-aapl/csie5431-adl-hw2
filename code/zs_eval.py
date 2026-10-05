@@ -47,7 +47,8 @@ def bm25_scores(queries, pids, texts, k1=1.2, b=0.75):
 def dense_scores(queries, texts, key, max_len, cache):
     import torch
     from sentence_transformers import SentenceTransformer
-    hf, qp, pp, pname = MODELS[key]
+    hf, qp, pp, pname = MODELS.get(key, (key, "", "", "query"))
+    key_s = key.replace("/", "_")
     if key.startswith("blair"):
         from sentence_transformers import models
         tr = models.Transformer(hf, model_args={"torch_dtype": torch.float16})
@@ -126,7 +127,7 @@ def main():
             S = scores[0]
     if a.method in ("dense", "hybrid"):
         tag = f"{a.method}-{a.model}-L{a.max_len}"
-        cache = f"{a.cache_dir}/{a.split}_{a.model}_L{a.max_len}.npy"
+        cache = f"{a.cache_dir}/{a.split}_{a.model.replace(chr(47), chr(95))}_L{a.max_len}.npy"
         scores.append(dense_scores(queries, texts, a.model, a.max_len, cache))
         S = scores[-1] if a.method == "dense" else rrf(scores)
     row = report(tag, S, gold, seen)

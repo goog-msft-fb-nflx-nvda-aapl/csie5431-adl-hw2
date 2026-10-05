@@ -118,3 +118,53 @@ allocated 4.65GiB / reserved 8.39GiB for the judge alone. Results JSON:
 above Simple and below Strong; MRR@10 0.646 is below Simple (0.650) by 0.004. All four numbers
 (public and private) are gated together per tier, so no tier is cleared yet on public. Private
 metrics unknown. Not yet checked: where the 3070 lands vs the 1hr budget.
+
+## 2026-10-06 — Reranking over the zero-shot hybrid shortlist (exp 3)
+
+Setup: `code/cands.py` caches the top-200 BM25+Qwen3-0.6B RRF candidates per split
+(public hybrid exact recall@10/30/50/100/200 = 0.762/0.892/0.917/0.948/0.967; train pool
+0.632/0.747/0.792/0.839/0.879). `code/rerank_eval.py` scores the top-N candidates with a
+reranker, re-sorts them, keeps the rest in RRF order. Docs truncated to 1800 chars, all-turn
+query. Exact-ID = our metric, graded = official `evaluate.py` (judge Qwen2.5-1.5B). H200 GPU1.
+
+| reranker (zero-shot) | depth | exact R@10 | exact MRR@10 | graded R@10 | graded MRR@10 | score time (pairs) |
+|---|---|---|---|---|---|---|
+| none (RRF hybrid) | - | 0.762 | 0.530 | 0.877 | 0.646 | - |
+| ms-marco-MiniLM-L6-v2 | 30 | 0.574 | 0.296 | 0.740 | 0.410 | 40s (50k, depth 50) |
+| bge-reranker-v2-m3 | 30 | 0.653 | 0.383 | 0.791 | 0.494 | 81s (50k) |
+| Qwen2.5-1.5B judge-style P(true), no reference | 20 | 0.701 | 0.380 | 0.867 | 0.562 | 158s (20k) |
+| Qwen3-Reranker-0.6B (yes/no logit) | 30 | 0.873 | 0.717 | 0.938 | 0.803 | 385s (50k, depth 50) |
+| Qwen3-Reranker-0.6B | 50 | 0.886 | 0.723 | not run | not run | 385s |
+
+Qwen3-Reranker-0.6B exact-ID by depth: d10 0.762/0.662, d20 0.837/0.700, d30 0.873/0.717,
+d50 0.886/0.723 (R@10/MRR@10). Seen vs unseen gold at d30: R@10 0.884 / 0.862, MRR@10 0.715 / 0.720.
+MiniLM, bge-reranker-v2-m3 and the Qwen2.5 scorer all lowered both metrics versus no reranking
+(those lists were re-sorted from depth 30/30/20, per-depth numbers in
+`/home/jtan/adl_hw2/results/rerank.jsonl`). The Qwen2.5 prompt here is mine, not `evaluate.py`'s
+(no reference product available at inference), so it is one prompt variant, not the final word on
+Qwen2.5 as a reranker. Loading Qwen3-Reranker-0.6B through sentence-transformers 5.1.0
+`CrossEncoder` gave a randomly initialized score head (warning at load), so the numbers above use
+the HF `AutoModelForCausalLM` yes/no-logit recipe from the model card; an earlier
+sentence-transformers attempt crashed and was discarded. Timing is H200, not 3070: 385s for
+50k pairs at max_len 1024; the 3070 figure is unmeasured and is the main open risk for this
+option.
+
+Graded depth-30 Qwen3-Reranker-0.6B result is above the Boss public MRR@10 threshold (0.800) and
+below its R@10 threshold (0.950); above Strong (0.885 / 0.680) and Simple on both public numbers.
+Private metrics unknown.
+
+## 2026-10-06 — Bi-encoder fine-tune, in-batch negatives (exp 4a)
+
+`code/ft_biencoder.py`: Qwen3-Embedding-0.6B, CachedMNRL (scale 20, batch 128, mini-batch 32),
+lr 1e-5, 2 epochs (68 steps), bf16, NO_DUPLICATES sampler, 10% of train targets held out as a
+product-disjoint dev split (index file saved, dev numbers not computed yet), train rows 4,347
+dialogues (some held-out) with the gold as the only positive, no hard negatives. Public exact-ID,
+512 tokens, fine-tuned weights `models/ftA_inbatch` on gsm-gpu2:
+
+| method | R@1 | R@10 | R@50 | R@100 | MRR@10 | R@10 seen / unseen |
+|---|---|---|---|---|---|---|
+| zero-shot qwen3-0.6b dense (exp 1) | 0.281 | 0.621 | 0.814 | 0.870 | 0.381 | 0.616 / 0.626 |
+| ftA dense | 0.563 | 0.859 | 0.946 | 0.968 | 0.666 | 0.848 / 0.870 |
+| ftA + bm25 RRF | 0.623 | 0.875 | 0.963 | 0.973 | 0.702 | 0.882 / 0.868 |
+
+Dense R@10 0.621 -> 0.859 from fine-tuning alone. Seen/unseen gold R@10 differ by 1-3 points.
