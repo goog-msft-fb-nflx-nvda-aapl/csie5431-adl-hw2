@@ -108,14 +108,14 @@ def main():
     ap.add_argument("--bs", type=int, default=64)
     ap.add_argument("--split", default="public")
     ap.add_argument("--emit-depth", type=int, default=0)
-    ap.add_argument("--no-query-prefix", action="store_true")
+    ap.add_argument("--cands", default="")
     a = ap.parse_args()
 
     root = os.path.join(os.path.dirname(__file__), "..", "data")
     qs = load_eval_queries(f"{root}/{a.split}/dialogues.jsonl")
     prods = load_products(f"{root}/{a.split}/products.jsonl")
     train_pids = set(load_products(f"{root}/train/products.jsonl"))
-    c = np.load(f"cache/cands_{a.split}.npz")
+    c = np.load(f"cache/cands_{a.split}{a.cands}.npz")
     pids, gold, top = c["pids"], c["gold"], c["top"][:, : a.depth]
     seen = np.array([q["gold_pid"] in train_pids for q in qs])
     cache = f"cache/rr_{a.split}_{a.name}.npy"
@@ -125,8 +125,9 @@ def main():
     else:
         qq = [qs[i]["query"] for i in range(len(qs)) for _ in range(a.depth)]
         dd = [prods[pids[j]][: a.doc_chars] for i in range(len(qs)) for j in top[i]]
-        if a.model == "qwen3rr":
-            flat = score_qwen3rr(qq, dd, a.bs, 1024)
+        if a.model.startswith("qwen3rr"):
+            path = a.model.split(":", 1)[1] if ":" in a.model else "Qwen/Qwen3-Reranker-0.6B"
+            flat = score_qwen3rr(qq, dd, a.bs, 1024, model_id=path)
         elif a.model == "qwen25-judge":
             flat = score_qwen25(qq, dd, a.bs, 1536)
         else:
@@ -134,6 +135,11 @@ def main():
         S = flat.reshape(len(qs), a.depth)
         np.save(cache, S)
     dt = time.time() - t0
+    try:
+        import torch
+        print("peak vram GB", torch.cuda.max_memory_allocated() / 2**30, flush=True)
+    except Exception:
+        pass
     print(f"{a.name}: scoring {dt:.0f}s for {S.size} pairs", flush=True)
     rows = {"name": a.name, "model": a.model, "score_seconds": round(dt), "pairs": int(S.size)}
     rows["first_stage"] = metrics(top, gold, seen)["all"]

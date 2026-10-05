@@ -168,3 +168,27 @@ dialogues (some held-out) with the gold as the only positive, no hard negatives.
 | ftA + bm25 RRF | 0.623 | 0.875 | 0.963 | 0.973 | 0.702 | 0.882 / 0.868 |
 
 Dense R@10 0.621 -> 0.859 from fine-tuning alone. Seen/unseen gold R@10 differ by 1-3 points.
+
+## 2026-10-06 — Bi-encoder fine-tune with 1 hard negative (exp 4b), Q2 generation draft (exp 5)
+
+4b: same recipe as 4a plus 1 mined hard negative per query (hybrid zero-shot rank 5..50, excluding
+gold and same-title products, no judge filtering), weights `models/ftB_hn1`. Public exact-ID:
+dense R@10 0.878 / MRR@10 0.694 (was 0.859 / 0.666 for 4a), hybrid with BM25 R@10 0.891 / MRR@10
+0.725 (4a hybrid 0.875 / 0.702); hybrid R@100 0.981. R@10 seen / unseen (hybrid) 0.898 / 0.884.
+Single seed each, so the 4a -> 4b difference (about 1.6 points R@10) is not yet checked for noise.
+ftC (3 negatives), ftD (lr 2e-5, 3 epochs), ftE (negatives from ranks 0..30) are queued.
+
+Q2 (`code/q2_generate.py`, Qwen2.5-1.5B-Instruct bf16 greedy, max 220 new tokens, top-3 retrieved
+specs of the Qwen3-Reranker d30 list, 700 chars/spec, 8 random public dialogues x 3 prompts):
+plain / grounded (one product, facts only, <80 words) / checklist (requirements bullets then
+recommendation, "not confirmed" line). Outputs `results/q2.jsonl` on gsm-gpu2. Crude counts over 8
+samples each: mean words 112 / 56 / 83; response names the top-1 title 8 / 7 / 5 of 8; contains a URL
+1 / 0 / 0; markdown bold 5 / 3 / 1; a number not in the specs 0 / 0 / 1. Gold was retrieved at rank 1
+for 6 of 8 dialogues (rank 3 and rank 2 for the others, so the response recommends the rank-1
+non-gold product, e.g. a Wild Kratts suit for a hand-puppet request). Qualitative: the plain prompt
+invented a link and claimed a "soft case design" the spec does not state; grounded produced short
+copy that stayed on the title and on spec-stated features; checklist listed requirements usefully
+but sometimes dropped the title ("[1] because ...") and wrote "None of the requirements are
+explicitly stated" under Not confirmed, i.e. the model did not do the verification the prompt asked
+for. These are 8 samples and counts of surface features, not a hallucination rate; no human or judge
+scoring has been done yet.
