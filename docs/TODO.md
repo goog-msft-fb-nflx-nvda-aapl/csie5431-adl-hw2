@@ -11,9 +11,10 @@
 - [x] Zero-shot baselines on public (BM25, bge-base, qwen3-0.6b, bge-m3, hybrids), see
       `docs/WORKLOG.md`. Script `code/zs_eval.py` is an analysis script, not yet a
       `retrieve_and_rerank()`.
-- [~] Baseline `retrieve_and_rerank()` (BM25 + zero-shot Qwen3-0.6B, RRF) written in
-      `retrieval_utils.py`; judge-graded `evaluate.py` run in progress (tmux `eval1` on
-      gsm-gpu2), results go in `docs/WORKLOG.md`.
+- [x] Baseline `retrieve_and_rerank()` (BM25 + zero-shot Qwen3-0.6B, RRF) in
+      `retrieval_utils.py`, run end to end: public graded R@10 0.877 / MRR@10 0.646
+      (see worklog). Public: R@10 clears Simple (0.860) but not Strong (0.885); MRR@10 is
+      0.004 short of Simple (0.650). Next: fine-tune / rerank to raise MRR@10.
 - [ ] Training-data construction strategy for a bi-encoder/reranker (anchor = query,
       positive = gold + judge-acceptable alternatives if obtainable, negative sampling
       strategy — in-batch, hard negatives from BM25/dense-retrieval misses, etc.) —

@@ -105,4 +105,16 @@ GPU env `adl_hw2_env` is Python 3.10, not 3.12.9.
 Baseline v0: `retrieve_and_rerank()` in `retrieval_utils.py` = BM25 + zero-shot
 Qwen3-Embedding-0.6B (fp16, 512 tokens, query prompt), RRF k=60, top 10. Running through
 `provided/retrieval.py` then `provided/evaluate.py --batch-size 8` on public (gsm-gpu2 GPU2,
-tmux `eval1`, log `/home/jtan/adl_hw2/eval1.log`). Results: pending.
+tmux `eval1`, log `/home/jtan/adl_hw2/eval1.log`).
+
+Results (public, 1,000 queries, 75k pool, official `evaluate.py`, judge Qwen2.5-1.5B bf16):
+graded Recall@10 0.877, graded MRR@10 0.646 (9,238 judge comparisons, 0 parse failures).
+Same ranked lists scored by exact gold ID (exp 1, hybrid-qwen3-0.6b): R@10 0.762, MRR@10 0.537.
+Timing on H200 (not the 3070): `retrieval.py` end to end 523s (BM25 + model load + pool encode
++ query encode + fusion, as one process); `evaluate.py` judge pass 328s at batch 8, peak CUDA
+allocated 4.65GiB / reserved 8.39GiB for the judge alone. Results JSON:
+`/home/jtan/adl_hw2/results/eval_bm25_qwen3.json`. Against the spec's public thresholds
+(Simple 0.860 / 0.650, Strong 0.885 / 0.680, Boss 0.950 / 0.800 for R@10 / MRR@10): R@10 0.877 is
+above Simple and below Strong; MRR@10 0.646 is below Simple (0.650) by 0.004. All four numbers
+(public and private) are gated together per tier, so no tier is cleared yet on public. Private
+metrics unknown. Not yet checked: where the 3070 lands vs the 1hr budget.
