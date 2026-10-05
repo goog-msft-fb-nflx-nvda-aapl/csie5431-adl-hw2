@@ -273,3 +273,18 @@ probability 0.5, otherwise the gold; everything else identical). Public exact-ID
 zero-shot hybrid shortlist 0.887 / 0.813 (R1 0.886 / 0.805); ftB shortlist 0.938 / 0.843 (R1 0.938 /
 0.835), depth 20 0.922 / 0.840, depth 10 0.891 / 0.822. Judge-graded on ftB shortlist d30: R@10 0.972,
 MRR@10 0.890 (R1: 0.975 / 0.883). R1 vs R2 differ by under 1 point on every number, single seed each.
+
+## 2026-10-06 — End-to-end through provided/retrieval.py + evaluate.py (exp 11)
+
+Final-style `retrieval_utils.py` (dense top-200, optional BM25 top-200 RRF k=60, rerank top 30 with
+the fine-tuned reranker, 1800 chars/doc, dense bs 32, rerank bs 16, fp16). Dense = `ftD_hn1_lr2e5_e3`,
+reranker = `rrR2_alt50`. Public 1,000 queries / 75k pool, official judge. H200 shared with other jobs:
+
+| BM25 in fusion | retrieval.py wall time | graded R@10 | graded MRR@10 |
+|---|---|---|---|
+| no (dense only) | 391s (dense stage 235s, rerank stage 155s) | 0.972 | 0.881 |
+| yes | 412s | 0.977 | 0.891 |
+
+ftF (3 hard negatives, lr 2e-5, 3 ep): dense R@10 0.920 / MRR@10 0.772 (ftD 0.912 / 0.760).
+Reranker R3 (accepted alternative as the positive in every group): ftB shortlist d30 exact 0.936 /
+0.829, zero-shot shortlist 0.885 / 0.799, i.e. below R1 and R2 on MRR@10.
