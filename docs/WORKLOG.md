@@ -67,3 +67,27 @@ while the Claude survey recommends judge-prompt pointwise rerank on the top 10-2
 claim that the Qwen judge is nondeterministic does not match `evaluate.py` (greedy
 decode, `CUBLAS_WORKSPACE_CONFIG` set); the rerank-vs-teacher question is open until
 tested. Model sizes/context lengths and the cited arXiv/HF pages are unverified by us.
+
+## 2026-10-06 — BLaIR zero-shot (exp 2, ablation only)
+
+Same setup as exp 1 (public, exact gold-ID, fp16, max_seq_len 512, passages = title\ndescription,
+all-turn query). BLaIR loaded via sentence-transformers Transformer + CLS pooling, L2-normalized,
+per its model card. `hyp1231/blair-roberta-{base,large}`. Contamination caveat: BLaIR is pretrained
+on Amazon Reviews 2023, which very likely overlaps this benchmark's products (unverified); treat
+as a disclosed ablation, not a submission candidate. No TA ruling requested.
+
+| method | R@1 | R@10 | R@50 | R@100 | MRR@10 | R@10 seen / unseen |
+|---|---|---|---|---|---|---|
+| blair-base dense | 0.186 | 0.487 | 0.706 | 0.792 | 0.273 | 0.474 / 0.500 |
+| blair-base + bm25 | 0.394 | 0.745 | 0.920 | 0.947 | 0.499 | 0.752 / 0.738 |
+| blair-large dense | 0.083 | 0.229 | 0.382 | 0.435 | 0.127 | 0.202 / 0.256 |
+| blair-large + bm25 | 0.202 | 0.544 | 0.875 | 0.918 | 0.290 | 0.548 / 0.540 |
+
+Pool encode on H200: base 77s / 0.87GB, large 125s / 1.48GB peak.
+
+Measured: BLaIR-base dense (R@10 0.487) is below zero-shot bge-base (0.556) and qwen3-0.6b
+(0.621) and close to bge-m3 (0.473); BLaIR-large dense is far lower (0.229) and its hybrid is
+below BM25 alone (0.765). No advantage from Amazon-domain pretraining shows up in this
+zero-shot setting. The large-model result being worse than base is unexplained; fp16 or
+pooling/format mismatch not ruled out, not investigated. Decision: drop BLaIR from the
+candidate list unless fine-tuning comparisons later give a reason to revisit.

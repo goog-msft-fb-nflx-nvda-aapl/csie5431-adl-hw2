@@ -21,6 +21,9 @@ MODELS = {
                  "Represent this sentence for searching relevant passages: ", "", None),
     "bge-m3": ("BAAI/bge-m3", "", "", None),
     "qwen3-0.6b": ("Qwen/Qwen3-Embedding-0.6B", "", "", "query"),
+    # BLaIR: CLS pooling + L2 norm per its model card (not a sentence-transformers repo)
+    "blair-base": ("hyp1231/blair-roberta-base", "", "", None),
+    "blair-large": ("hyp1231/blair-roberta-large", "", "", None),
 }
 
 
@@ -45,7 +48,14 @@ def dense_scores(queries, texts, key, max_len, cache):
     import torch
     from sentence_transformers import SentenceTransformer
     hf, qp, pp, pname = MODELS[key]
-    model = SentenceTransformer(hf, device="cuda", model_kwargs={"torch_dtype": torch.float16})
+    if key.startswith("blair"):
+        from sentence_transformers import models
+        tr = models.Transformer(hf, model_args={"torch_dtype": torch.float16})
+        model = SentenceTransformer(
+            modules=[tr, models.Pooling(tr.get_word_embedding_dimension(), pooling_mode="cls")],
+            device="cuda")
+    else:
+        model = SentenceTransformer(hf, device="cuda", model_kwargs={"torch_dtype": torch.float16})
     model.max_seq_length = max_len
     t0 = time.time()
     if cache and os.path.exists(cache):
