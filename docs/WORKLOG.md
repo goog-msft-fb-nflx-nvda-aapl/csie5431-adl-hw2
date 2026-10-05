@@ -233,3 +233,31 @@ their top 20. Saved `cache/judge_train.npy` (1 accept, 0 reject, 2 gold). Rerank
 (`code/ft_reranker.py`: listwise softmax CE, 1 positive + 7 judge-rejected negatives, lr 1e-5,
 1 epoch, 4,344 train dialogues, product-disjoint 10% dev held out) is running for gold-only
 positives (R1) and gold-or-accepted-alternative positives at probability 0.5 (R2).
+
+## 2026-10-06 — Reranker fine-tune R1 (gold positive, judge-rejected negatives) and more bi-encoder variants (exp 9)
+
+Bi-encoder variants (public exact-ID; Qwen3-Embedding-0.6B, CachedMNRL, batch 128; all single seed):
+
+| run | settings | dense R@10 / MRR@10 | + BM25 RRF R@10 / MRR@10 |
+|---|---|---|---|
+| ftA | in-batch only, lr 1e-5, 2 ep | 0.859 / 0.666 | 0.875 / 0.702 |
+| ftB | 1 hard neg (rank 5-50), lr 1e-5, 2 ep | 0.878 / 0.694 | 0.891 / 0.725 |
+| ftC | 3 hard negs (rank 5-50), lr 1e-5, 2 ep | 0.885 / 0.713 | 0.892 / 0.737 |
+| ftD | 1 hard neg, lr 2e-5, 3 ep | 0.912 / 0.760 | 0.907 / 0.750 |
+
+For ftD the BM25 fusion is below dense alone at R@10 and MRR@10 (R@100 0.985 dense, 0.987 hybrid).
+Hyperparameters are being chosen by these public numbers (no separate dev numbers computed yet), so
+treat the public metrics as optimistic for the chosen configs; the product-disjoint dev split from
+`ft_biencoder.py` has not been scored.
+
+Reranker R1 (`code/ft_reranker.py`, Qwen3-Reranker-0.6B, full fine-tune bf16, listwise softmax CE over
+1 gold + 7 judge-rejected candidates from train zero-shot top-20, lr 1e-5, 1 epoch, 1,086 steps of 4
+dialogues, ~15 min on a shared H200): public exact-ID with depth-30 rerank:
+
+| first stage | zero-shot reranker R@10 / MRR@10 | R1 reranker R@10 / MRR@10 |
+|---|---|---|
+| zero-shot hybrid | 0.873 / 0.717 | 0.886 / 0.805 |
+| ftB hybrid | 0.920 / 0.745 | 0.938 / 0.835 |
+
+R1 over ftB hybrid depth 20 / 10: 0.924 / 0.828, 0.891 / 0.818. Judge-graded (official `evaluate.py`)
+for ftB hybrid + R1 d30: graded R@10 0.975, graded MRR@10 0.883.
