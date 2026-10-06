@@ -448,3 +448,17 @@ deleted from gsm-gpu2 together with redundant test copies (`clean/`, `zt/`, `dlt
 `__pycache__`). Kept on the GPU box: `code/`, `data/`, `provided/`, `cache/`, `results/`, `figures/`, logs, and all
 model directories under `models/` (about 31GB total, superseded experiment checkpoints not yet deleted; live
 candidates are `dense_final2` and `reranker_final2`).
+
+## 2026-10-06 — GPU server wiped, reproducibility check
+
+Before deleting, the repo got `scripts/setup_gpu_env.sh` (conda env with the pinned versions, `datasets==4.0.0` and
+`huggingface-hub<1.0` installed after the main packages) and `results_archive/` (raw metric files, submitted
+pipeline's public ranked lists, judge labels for the train candidates). Tested on gsm-gpu2 in a scratch directory with
+a differently named env: the script built a working env (torch 2.8.0+cu128, transformers 4.56.1,
+sentence-transformers 5.1.0, datasets 4.0.0, CUDA available) and `download_hw2_data.sh` re-downloaded the four data
+files byte-identical to the ones used for all experiments. Then deleted from gsm-gpu2: `/home/jtan/adl_hw2` (code,
+data, cache, results, logs, all model checkpoints), the test directory, and conda envs `adl_hw2_env` and
+`adl_hw2_env_test`. Not deleted: `~/.cache/huggingface` (85GB, shared with other projects, holds the base models
+downloaded for this one). Trained final models are only on the Google Drive link and the Mac copy
+(`submission_artifacts/models.tar`); the other experiment checkpoints are gone. The root README and the setup
+script state that the env used Python 3.10, not the grader's 3.12.9.
