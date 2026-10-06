@@ -1,4 +1,4 @@
-# Question for the TA: how is `run.sh` checked? (ADL2026 HW2)
+# Question for the TA: is `run.sh` executed? (ADL2026 HW2)
 
 **Where to send:** NTU COOL discussion forum first; otherwise `adl-ta@csie.ntu.edu.tw` with the subject prefix
 `[ADL2026 HW2]` (contact section of the assignment slides).
@@ -8,7 +8,7 @@
 
 Hello,
 
-I am r13921031. I have one question about `run.sh`, plus a smaller follow-up. Everything the question depends on is
+I am r13921031. I have one question about `run.sh`. Everything it depends on is
 quoted below so it can be answered without opening my files.
 
 ## 1. What the assignment says (quoted from the Submission and Execution-environment parts of the slides)
@@ -52,18 +52,13 @@ the provided judge model on the provided training dialogues (step 2).
 
 ## 3. Questions
 
-**Q1 (needed).** Is `run.sh` executed during grading?
+**Q1.** Is `run.sh` executed during grading?
 - If **no**, i.e. it is only read and compared against `README.md`, then my current `run.sh` is fine and I will leave it.
 - If **yes**, on which hardware and with what time limit? My `run.sh` needs a large-memory GPU and a few hours, so it
   would fail on the RTX 3070 8GB machine described above. Is it acceptable that `run.sh` assumes a larger GPU, or
   should it be limited to what fits the 8GB machine?
 - If it is executed, in which directory will the training data (`data/train/...`) be when `run.sh` starts? Mine reads
   it from `./data` unless `HW2_DATA` is set.
-
-**Q2 (follow-up, only matters if `run.sh` is executed).** Step 2 costs about 1.5 hours and its output is small (about
-100KB: for each train dialogue, which of its top-20 candidates the provided judge accepted). Is it acceptable for
-`download.sh` to also fetch these saved labels (they are derived only from the provided training data and the
-provided judge) so that `run.sh` can skip step 2? Or must `run.sh` regenerate them from scratch?
 
 Thank you.
 r13921031
