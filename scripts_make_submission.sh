@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Assemble ./submission/<id>/ and <id>.zip from the repo (no models, no data). Usage: bash scripts_make_submission.sh r05921008
+# Assemble ./submission/<id>/ and <id>.zip from the repo (no models, no data). Usage: bash scripts_make_submission.sh r13921031
 set -euo pipefail
 ID="${1:?student id}"
 OUT="submission/$ID"

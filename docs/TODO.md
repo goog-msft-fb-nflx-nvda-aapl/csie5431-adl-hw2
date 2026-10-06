@@ -14,7 +14,7 @@
       valid 3+ weeks after the deadline, then set `MODELS_URL` in `submission_template/download.sh`
       (needs the user: gdown-readable link, e.g. Google Drive).
 - [ ] 3070 timing is unmeasured (no 3070 available); time guard in `retrieval_utils.py` is the mitigation.
-- [ ] Run `scripts_make_submission.sh r05921008` after the models URL is set, test `download.sh` + a clean
+- [ ] Run `scripts_make_submission.sh r13921031` after the models URL is set, test `download.sh` + a clean
       run of `retrieval.py` from the unzipped folder, then submit on NTU COOL (deadline 2026/10/25 23:59:59).
 - [ ] Optional: score the held-out product-disjoint dev split; more seeds for the final configuration.
 

@@ -409,8 +409,8 @@ so the public numbers are optimistic for this configuration; private numbers can
 `code/make_figures.py` on gsm-gpu2). Final per-category exact R@10 / MRR@10 (200 queries each): beauty
 0.970 / 0.880, home & kitchen 0.985 / 0.923, pet supplies 0.985 / 0.848, sports & outdoors 0.965 / 0.899,
 toys & games 0.920 / 0.796; seen / unseen gold (500 each) 0.972 / 0.868 and 0.958 / 0.870.
-`scripts_make_submission.sh r05921008` assembles `submission/r05921008/` + zip (no models, no data); the
-student id r05921008 is taken from the account email and is not confirmed. Model tarball
+`scripts_make_submission.sh r13921031` assembles `submission/r13921031/` + zip (no models, no data); the
+student id r13921031 is taken from the account email and is not confirmed. Model tarball
 `submission_artifacts/models.tar` (2.4GB) is being copied from gsm-gpu2 to the Mac. Open: hosting URL for
 `download.sh` (needs the user), 3070 timing (no hardware), clean-room test of the unzipped submission.
 
@@ -431,12 +431,12 @@ Models hosted on Google Drive (file id in `submission_template/download.sh`). `g
 the gdown version pip installs today, so the script extracts the file id and calls `python -m gdown <id>`.
 Test on gsm-gpu2 in an empty directory: 2.42GB downloaded in 37s, extracted, and `models/dense/model.safetensors`
 and `models/reranker/model.safetensors` are byte-identical (`cmp`) to the packaged `dense_final2` /
-`reranker_final2`. `scripts_make_submission.sh r05921008` built `submission/r05921008.zip` with `docs/report.pdf`
-(my draft; the report is not being redone). Student id r05921008 is unconfirmed.
+`reranker_final2`. `scripts_make_submission.sh r13921031` built `submission/r13921031.zip` with `docs/report.pdf`
+(my draft; the report is not being redone). Student id r13921031 is unconfirmed.
 
 ## 2026-10-06 — Full check from the built zip
 
-`submission/r05921008.zip` copied to gsm-gpu2, unzipped into a fresh directory, `download.sh` run (exit 0, models
+`submission/r13921031.zip` copied to gsm-gpu2, unzipped into a fresh directory, `download.sh` run (exit 0, models
 fetched from Google Drive), then the TA's `retrieval.py` and `evaluate.py --batch-size 8` on public with default
 settings: retrieval 449s, peak VRAM 3.45GB, graded R@10 0.987, graded MRR@10 0.9076. Same numbers as the
 earlier clean-room run. Still not done: any run on a 3070 or the private split.
