@@ -8,3 +8,5 @@ tqdm==4.67.1
 transformers==4.56.1
 datasets==5.0.1
 scikit-learn
+gdown
+matplotlib

@@ -11,3 +11,5 @@ results/
 models/
 checkpoints/
 .env
+submission_artifacts/
+submission/

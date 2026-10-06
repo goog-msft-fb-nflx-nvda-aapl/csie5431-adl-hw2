@@ -1,33 +1,22 @@
 # ADL HW2 — TODO / backlog
 
-## Current state (2026-10-05)
+## Current state (2026-10-06)
 
-- [x] Spec read + consolidated (`docs/spec/spec.md`), PDF-verified against the Qwen OCR.
-- [x] Data downloaded (`data/train`, `data/public`), EDA done (`docs/EDA.md`).
-- [x] Repo + `CLAUDE.md` set up.
-- [x] Deep-research survey prompt, see `docs/survey/`.
-- [x] Survey run on Claude + Gemini + Perplexity, synthesized into the method backlog
-      below.
-- [x] Zero-shot baselines on public (BM25, bge-base, qwen3-0.6b, bge-m3, hybrids), see
-      `docs/WORKLOG.md`. Script `code/zs_eval.py` is an analysis script, not yet a
-      `retrieve_and_rerank()`.
-- [x] Baseline `retrieve_and_rerank()` (BM25 + zero-shot Qwen3-0.6B, RRF) in
-      `retrieval_utils.py`, run end to end: public graded R@10 0.877 / MRR@10 0.646
-      (see worklog). Public: R@10 clears Simple (0.860) but not Strong (0.885); MRR@10 is
-      0.004 short of Simple (0.650). Next: fine-tune / rerank to raise MRR@10.
-- [ ] Training-data construction strategy for a bi-encoder/reranker (anchor = query,
-      positive = gold + judge-acceptable alternatives if obtainable, negative sampling
-      strategy — in-batch, hard negatives from BM25/dense-retrieval misses, etc.) —
-      report Q1 requires this to be explained in detail either way.
-- [ ] At least 3 distinct retrieval/reranking strategies tried, compared, and written
-      up (report Q1 explicitly asks "how many did you try, why is the submitted one best").
-- [ ] Q2 (generation analysis): Qwen2.5-1.5B-Instruct generation over retrieved specs,
-      >=5 examples, >=3 different prompts compared.
-- [ ] Package for submission: `download.sh` (model + external data only, <=30min @
-      10MB/s, no pip install), `run.sh` (reproduces training), `README.md`
-      (step-by-step, must match `run.sh`), `report.pdf`.
-- [ ] Verify `run.sh`/`evaluate.py` finishes public-set retrieval within 1hr on RTX 3070
-      8GB VRAM equivalent constraints (tighter than HW1's 3080Ti 10GB — mind model size).
+- [x] Spec, data, EDA, repo, survey (Claude + Gemini + Perplexity) and method backlog.
+- [x] `retrieve_and_rerank()` final pipeline in `retrieval_utils.py`: fine-tuned Qwen3-Embedding-0.6B +
+      BM25 (RRF) -> fine-tuned Qwen3-Reranker-0.6B on top 30. Public graded R@10 0.986 / MRR@10 0.908
+      (`docs/WORKLOG.md`, exp 16).
+- [x] Training-data construction, >= 3 strategies compared, ablations, figures (`figures/`).
+- [x] Q2 generation analysis (3 prompts, 10 samples), in `docs/report.md`.
+- [x] Report draft `docs/report.md` -> `docs/report.pdf`; submission scaffolding
+      (`submission_template/`, `scripts_make_submission.sh`).
+- [ ] Host `submission_artifacts/models.tar` (2.4GB: `models/dense`, `models/reranker`) at a URL that stays
+      valid 3+ weeks after the deadline, then set `MODELS_URL` in `submission_template/download.sh`
+      (needs the user: gdown-readable link, e.g. Google Drive).
+- [ ] 3070 timing is unmeasured (no 3070 available); time guard in `retrieval_utils.py` is the mitigation.
+- [ ] Run `scripts_make_submission.sh r05921008` after the models URL is set, test `download.sh` + a clean
+      run of `retrieval.py` from the unzipped folder, then submit on NTU COOL (deadline 2026/10/25 23:59:59).
+- [ ] Optional: score the held-out product-disjoint dev split; more seeds for the final configuration.
 
 ## Method backlog (from survey: `docs/survey/claude_survey_1.md`, `geimini_survey_1.md`)
 

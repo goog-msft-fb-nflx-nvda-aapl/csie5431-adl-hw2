@@ -13,7 +13,7 @@ mkdir -p cache models results
 python $S/cands.py --split train --model qwen3-0.6b --n 200
 # 2. official judge (Qwen2.5-1.5B-Instruct, gold as reference) over the top-20 candidates of each train dialogue
 python $S/judge_labels.py --split train --n 20 --bs 32
-# 3. dense retriever: CachedMNRL, 3 mined hard negatives per query
-python $S/ft_biencoder.py --out models/dense --n-neg 3 --lr 2e-5 --epochs 3 --dev-frac 0
-# 4. reranker: listwise softmax CE, 1 positive (gold or judge-accepted alternative) + 7 judge-rejected negatives
-python $S/ft_reranker.py --out models/reranker --alt-prob 0.5 --use-all-train
+# 3. dense retriever: CachedMNRL, 7 mined hard negatives per query
+python $S/ft_biencoder.py --out models/dense --n-neg 7 --lr 3e-5 --epochs 4 --dev-frac 0
+# 4. reranker: listwise softmax CE, 1 positive (gold or judge-accepted alternative) + 15 judge-rejected negatives
+python $S/ft_reranker.py --out models/reranker --alt-prob 0.5 --lr 2e-5 --group 16 --qbs 2 --use-all-train
