@@ -462,3 +462,8 @@ data, cache, results, logs, all model checkpoints), the test directory, and cond
 downloaded for this one). Trained final models are only on the Google Drive link and the Mac copy
 (`submission_artifacts/models.tar`); the other experiment checkpoints are gone. The root README and the setup
 script state that the env used Python 3.10, not the grader's 3.12.9.
+
+Follow-up: removed the base models this project downloaded from `~/.cache/huggingface/hub` on gsm-gpu2 (bge-base,
+bge-m3, bge-reranker-v2-m3, Qwen2.5-1.5B-Instruct, Qwen3-Embedding-0.6B, Qwen3-Reranker-0.6B, both BLaIR, MiniLM
+cross-encoder; about 14GB, picked by file dates from 2026-10-05/06). The remaining entries predate this project (other
+projects' models) and were left in place. Re-running the experiments re-downloads these from the Hub.
