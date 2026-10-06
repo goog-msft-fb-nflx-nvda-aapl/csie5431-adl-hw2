@@ -3,6 +3,8 @@
 Submission contents: `retrieval_utils.py` (the only edited provided file), `requirements.txt`,
 `download.sh`, `run.sh`, `report.pdf`, `code/script/` (all training / analysis / report scripts).
 
+Repository (private until after the deadline): https://github.com/goog-msft-fb-nflx-nvda-aapl/csie5431-adl-hw2
+
 ## Method in one paragraph
 
 `retrieve_and_rerank()` encodes every product with a fine-tuned Qwen3-Embedding-0.6B (dense), also ranks

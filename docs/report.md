@@ -4,6 +4,9 @@ geometry: margin=2cm
 fontsize: 10pt
 ---
 
+Code and logs: <https://github.com/goog-msft-fb-nflx-nvda-aapl/csie5431-adl-hw2> (private until after the
+deadline, made public afterwards; `docs/WORKLOG.md` there is the full experiment log).
+
 All numbers are on the public split (1,000 dialogues, 75,000 products) unless stated. "Graded" = the TA's
 `evaluate.py` (gold or judge-accepted alternative counts, judge Qwen2.5-1.5B-Instruct); "exact" = gold ID
 only. Timings are from a shared NVIDIA H200; **no RTX 3070 was available, so 3070 speed was not measured.**
