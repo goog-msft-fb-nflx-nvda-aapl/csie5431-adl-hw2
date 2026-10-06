@@ -440,3 +440,11 @@ and `models/reranker/model.safetensors` are byte-identical (`cmp`) to the packag
 fetched from Google Drive), then the TA's `retrieval.py` and `evaluate.py --batch-size 8` on public with default
 settings: retrieval 449s, peak VRAM 3.45GB, graded R@10 0.987, graded MRR@10 0.9076. Same numbers as the
 earlier clean-room run. Still not done: any run on a 3070 or the private split.
+
+## 2026-10-06 — GPU box cleanup
+
+Launcher shell scripts used for each experiment (27 `run_*.sh`) copied into `code/launchers/` and pushed, then
+deleted from gsm-gpu2 together with redundant test copies (`clean/`, `zt/`, `dltest/`, `pkg/`, `models.tar`, old zip,
+`__pycache__`). Kept on the GPU box: `code/`, `data/`, `provided/`, `cache/`, `results/`, `figures/`, logs, and all
+model directories under `models/` (about 31GB total, superseded experiment checkpoints not yet deleted; live
+candidates are `dense_final2` and `reranker_final2`).
