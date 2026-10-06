@@ -367,3 +367,25 @@ BM25 ablation in the final configuration (dense_final + reranker_final, both tra
 dialogues, `retrieval.py` + `evaluate.py`, public): with BM25 fusion graded R@10 0.977 / MRR@10 0.887
 (448s); dense only 0.969 / 0.873 (448s). dense_final = ftF recipe (3 hard negatives, lr 2e-5, 3 ep),
 reranker_final = R2 recipe (alt-prob 0.5, lr 1e-5, 1 ep). Peak VRAM 3.45GB.
+
+## 2026-10-06 — Seeds and larger sweeps (exp 15)
+
+Seed noise (public exact-ID, seed also changes the 10% held-out dev split and negative sampling):
+- ftF recipe (3 hard negatives, lr 2e-5, 3 ep), dense R@10 / MRR@10, seeds 0/1/2: 0.920 / 0.772,
+  0.919 / 0.772, 0.916 / 0.774. Hybrid with BM25: 0.912 / 0.763, 0.913 / 0.765, 0.912 / 0.761.
+- R2 reranker recipe over the ftB shortlist at depth 30, R@10 / MRR@10, seeds 0/1/2: 0.938 / 0.843,
+  0.940 / 0.835, 0.936 / 0.836 (mean 0.938 / 0.838).
+So on these runs the seed-to-seed spread is about 0.004 R@10 and 0.008 MRR@10.
+
+More bi-encoder settings (all 1 seed): ftH (3 negs, lr 3e-5, 4 ep) dense 0.928 / 0.792, hybrid 0.920 /
+0.776; ftI (3 negs, lr 5e-5, 5 ep) dense 0.919 / 0.780, hybrid 0.922 / 0.780; ftJ (7 negs, lr 3e-5,
+4 ep) dense 0.932 / 0.797, hybrid 0.920 / 0.780. In these three the BM25 fusion is not above dense alone
+at R@10 / MRR@10 but is at R@100 (0.993 vs 0.987-0.991).
+
+More reranker settings, ftB shortlist depth 30 exact (zero-shot-shortlist numbers in parentheses):
+R4 (2 epochs) 0.936 / 0.847 (0.886 / 0.820); R5 (lr 2e-5, group 16 = 1 + 15 negatives, 2 queries per step,
+1 epoch) 0.940 / 0.857 (0.887 / 0.827); R6 (lr 5e-6) 0.936 / 0.820 (0.885 / 0.794). R5 is the best exact
+MRR@10 so far (+0.019 over the R2 mean, about two seed spreads).
+
+Next: retrain with the ftJ recipe (dense) and R5 recipe (reranker) on all train dialogues
+(`models/dense_final2`, `models/reranker_final2`), run end to end through the official scripts.
