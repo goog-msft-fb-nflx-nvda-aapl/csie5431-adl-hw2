@@ -424,3 +424,12 @@ the 0.001 R@10 difference is run-to-run variation on the same models and not inv
 default paths `models/dense`, `models/reranker` resolve correctly. `download.sh` not tested (no URL yet).
 The report is being written by the user with Claude on the web from `report_materials/` (bundle also at
 `report_materials.zip`).
+
+## 2026-10-06 — download.sh tested, submission zip built
+
+Models hosted on Google Drive (file id in `submission_template/download.sh`). `gdown --fuzzy` is rejected by
+the gdown version pip installs today, so the script extracts the file id and calls `python -m gdown <id>`.
+Test on gsm-gpu2 in an empty directory: 2.42GB downloaded in 37s, extracted, and `models/dense/model.safetensors`
+and `models/reranker/model.safetensors` are byte-identical (`cmp`) to the packaged `dense_final2` /
+`reranker_final2`. `scripts_make_submission.sh r05921008` built `submission/r05921008.zip` with `docs/report.pdf`
+(my draft; the report is not being redone). Student id r05921008 is unconfirmed.

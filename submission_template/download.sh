@@ -3,9 +3,10 @@
 # No external training data is used.
 set -euo pipefail
 cd "$(dirname "$0")"
-MODELS_URL="${MODELS_URL:-__SET_MODELS_URL__}"
+MODELS_URL="${MODELS_URL:-https://drive.google.com/file/d/11UhLDC84CfulU4-plYaUMDsj4ZACADPN/view?usp=sharing}"
 if [[ "$MODELS_URL" == __SET_* ]]; then echo "models URL not set" >&2; exit 1; fi
-python -m gdown --fuzzy "$MODELS_URL" -O models.tar
+FILE_ID="$(echo "$MODELS_URL" | sed -E 's#.*/d/([^/?]+).*#\1#')"
+python -m gdown "$FILE_ID" -O models.tar
 tar -xf models.tar
 rm -f models.tar
 test -f models/dense/config.json && test -f models/reranker/config.json
