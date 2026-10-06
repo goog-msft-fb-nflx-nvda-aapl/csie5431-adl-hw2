@@ -7,7 +7,7 @@ Graded on Recall@10 / MRR@10 (gold + LLM-judged acceptable alternatives), public
 private test, gated at three baseline tiers. Deadline 2026/10/25 23:59:59.
 
 **Status**: setup phase — data downloaded, EDA done, no training/experiments run yet.
-See `CLAUDE.md` for full project context (GPU server, GitHub rules, working style) and
+See `docs/WORKLOG.md` for full project context (GPU server, GitHub rules, working style) and
 `docs/TODO.md` for what's next.
 
 ## Layout

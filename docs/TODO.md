@@ -2,7 +2,7 @@
 
 ## Current state (2026-10-06)
 
-- [x] Spec, data, EDA, repo, survey (Claude + Gemini + Perplexity) and method backlog.
+- [x] Spec, data, EDA, repo, survey (three web LLMs (Gemini, Perplexity, one more)) and method backlog.
 - [x] `retrieve_and_rerank()` final pipeline in `retrieval_utils.py`: fine-tuned Qwen3-Embedding-0.6B +
       BM25 (RRF) -> fine-tuned Qwen3-Reranker-0.6B on top 30. Public graded R@10 0.986 / MRR@10 0.908
       (`docs/WORKLOG.md`, exp 16).
@@ -18,11 +18,11 @@
       run of `retrieval.py` from the unzipped folder, then submit on NTU COOL (deadline 2026/10/25 23:59:59).
 - [ ] Optional: score the held-out product-disjoint dev split; more seeds for the final configuration.
 
-## Method backlog (from survey: `docs/survey/claude_survey_1.md`, `geimini_survey_1.md`)
+## Method backlog (from survey: `docs/survey/survey_1_web_llm.md`, `geimini_survey_1.md`)
 
 All throughput/latency/benchmark numbers in the surveys are unmeasured estimates or
 unverified citations; nothing below is adopted until measured here. Perplexity response
-run (Claude, Gemini, Perplexity responses all in `docs/survey/`).
+run (the three web LLMs responses all in `docs/survey/`).
 
 Measure first:
 1. Benchmark encode throughput + rerank pairs/s on the 8GB target (or a proxy) for

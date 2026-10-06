@@ -1,6 +1,6 @@
 # Deep research prompt — ADL HW2 (RAG product retrieval) survey
 
-Paste this whole file into Claude (Opus, for a research task like this), Gemini Deep
+Paste this whole file into a web LLM (a strong model, for a research task like this), Gemini Deep
 Research, or Perplexity. Goal: a grounded candidate list of methods, models, and
 datasets to try, plus a concrete ablation/analysis/visualization plan — not a generic
 RAG tutorial. Everything needed to understand the task is below; don't assume outside

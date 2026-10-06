@@ -17,14 +17,14 @@
   pool at all — a retriever/reranker needs to generalize from product *text*, not
   memorize train-pool identities.
 - Set up this repo (`goog-msft-fb-nflx-nvda-aapl/csie5431-adl-hw2`, private) and
-  `CLAUDE.md` with project conventions (GPU server gotchas, GitHub rules, working
+  a project notes file with conventions (GPU server gotchas, GitHub rules, working
   style) carried over from the HW1 project, so a fresh session has full context without
   re-deriving it.
-- 2026-10-05 later: Claude + Gemini survey responses saved in `docs/survey/`, synthesized
+- 2026-10-05 later: two web LLMs survey responses saved in `docs/survey/`, synthesized
   into a numbered method backlog in `docs/TODO.md`. Perplexity not run yet. No numbers
   from the surveys are measured on our setup.
 - Next (as of setup): write the deep-research survey prompt (incorporating the EDA findings above),
-  run it externally (Claude/Gemini/Perplexity), then start the candidate-method backlog
+  run it externally (web LLMs), then start the candidate-method backlog
   the same way HW1 did — see `docs/TODO.md`.
 
 ## 2026-10-05 — Zero-shot baselines (exp 1)
@@ -57,13 +57,13 @@ measured: judge-graded metrics, fine-tuned models, any reranker, 3070 timing, tr
 
 `docs/survey/perplexity_survey_1.md` saved (pre-signed attachment URLs in its citations
 stripped). Folded into `docs/TODO.md` as backlog items 14-18. Nothing in it is measured
-by us. Points of agreement with the Claude/Gemini surveys: BM25 + dense RRF first stage,
+by us. Points of agreement with the first two surveys: BM25 + dense RRF first stage,
 fine-tuned Qwen3-Embedding-0.6B as the main dense candidate, cross-encoder rerank on
 top ~50, product-disjoint dev split, full-dialogue queries, cached MNRL, conservative
 hard-negative filtering. Points of difference: it recommends cross-encoder/ms-marco-
 MiniLM-L6-v2 as the primary reranker and mxbai-embed-large-v1 as the safe dense
 fallback; it advises against Qwen2.5-1.5B as an online reranker (offline teacher only)
-while the Claude survey recommends judge-prompt pointwise rerank on the top 10-20. Its
+while the first survey recommends judge-prompt pointwise rerank on the top 10-20. Its
 claim that the Qwen judge is nondeterministic does not match `evaluate.py` (greedy
 decode, `CUBLAS_WORKSPACE_CONFIG` set); the rerank-vs-teacher question is open until
 tested. Model sizes/context lengths and the cited arXiv/HF pages are unverified by us.
@@ -422,7 +422,7 @@ packaged `models/{dense,reranker}` (from `dense_final2` / `reranker_final2`). `r
 graded R@10 0.987, MRR@10 0.9076 (0.986 / 0.9078 in the earlier run with models loaded from `models/*_final2`;
 the 0.001 R@10 difference is run-to-run variation on the same models and not investigated). Reranker
 default paths `models/dense`, `models/reranker` resolve correctly. `download.sh` not tested (no URL yet).
-The report is being written by the user with Claude on the web from `report_materials/` (bundle also at
+The report is being written by the user with a web LLM from `report_materials/` (bundle also at
 `report_materials.zip`).
 
 ## 2026-10-06 — download.sh tested, submission zip built
