@@ -413,3 +413,14 @@ toys & games 0.920 / 0.796; seen / unseen gold (500 each) 0.972 / 0.868 and 0.95
 student id r05921008 is taken from the account email and is not confirmed. Model tarball
 `submission_artifacts/models.tar` (2.4GB) is being copied from gsm-gpu2 to the Mac. Open: hosting URL for
 `download.sh` (needs the user), 3070 timing (no hardware), clean-room test of the unzipped submission.
+
+## 2026-10-06 — Clean-room test of the packaged submission
+
+`scripts_make_submission.sh` output copied to gsm-gpu2 `clean/` with the TA harness files, `data/` and the
+packaged `models/{dense,reranker}` (from `dense_final2` / `reranker_final2`). `retrieval.py` then
+`evaluate.py --batch-size 8` with default settings: retrieval 448s (peak VRAM 4.45GB in the rerank stage),
+graded R@10 0.987, MRR@10 0.9076 (0.986 / 0.9078 in the earlier run with models loaded from `models/*_final2`;
+the 0.001 R@10 difference is run-to-run variation on the same models and not investigated). Reranker
+default paths `models/dense`, `models/reranker` resolve correctly. `download.sh` not tested (no URL yet).
+The report is being written by the user with Claude on the web from `report_materials/` (bundle also at
+`report_materials.zip`).
