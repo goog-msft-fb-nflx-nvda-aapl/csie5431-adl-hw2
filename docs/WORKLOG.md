@@ -433,3 +433,10 @@ Test on gsm-gpu2 in an empty directory: 2.42GB downloaded in 37s, extracted, and
 and `models/reranker/model.safetensors` are byte-identical (`cmp`) to the packaged `dense_final2` /
 `reranker_final2`. `scripts_make_submission.sh r05921008` built `submission/r05921008.zip` with `docs/report.pdf`
 (my draft; the report is not being redone). Student id r05921008 is unconfirmed.
+
+## 2026-10-06 — Full check from the built zip
+
+`submission/r05921008.zip` copied to gsm-gpu2, unzipped into a fresh directory, `download.sh` run (exit 0, models
+fetched from Google Drive), then the TA's `retrieval.py` and `evaluate.py --batch-size 8` on public with default
+settings: retrieval 449s, peak VRAM 3.45GB, graded R@10 0.987, graded MRR@10 0.9076. Same numbers as the
+earlier clean-room run. Still not done: any run on a 3070 or the private split.
