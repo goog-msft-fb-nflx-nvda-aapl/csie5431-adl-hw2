@@ -43,8 +43,10 @@ the location with `HW2_DATA`). It runs, in order: (1) zero-shot BM25 + Qwen3-Emb
 dialogue (`cands.py`), (2) the judge labels as above (`judge_labels.py`, skipped when the file exists), (3) dense
 fine-tuning (`ft_biencoder.py`), (4) reranker fine-tuning (`ft_reranker.py`), writing `models/dense` and
 `models/reranker`. All four steps fit an 8GB GPU: peak allocated memory measured on an H200 under a 7GiB cap was 3.34
-(step 1), 4.07 (step 2), 4.99 (step 3) and 5.85 GiB (step 4). Measured on a shared H200 (not on a 3070): step 1 about
-6 minutes, step 3 16 minutes, step 4 about 45 minutes. The base models (`Qwen/Qwen3-Embedding-0.6B`,
+(step 1), 4.07 (step 2), 4.99 (step 3) and 5.85 GiB (step 4). Measured on a shared H200 (not on a 3070): the whole `run.sh` with the
+labels step skipped took 40 minutes (step 1 about 6 minutes, step 3 16 minutes, step 4 about 15-45 minutes depending on GPU
+load); running it from the unzipped submission under a 7GiB cap and then the TA's harness gave graded R@10 0.979 and
+MRR@10 0.895 on public. The base models (`Qwen/Qwen3-Embedding-0.6B`,
 `Qwen/Qwen3-Reranker-0.6B`, `Qwen/Qwen2.5-1.5B-Instruct`) are fetched from the Hugging Face hub by the scripts.
 
 Other scripts in `code/script/`: `zs_eval.py` (zero-shot BM25 / dense baselines, also imported by `cands.py`),

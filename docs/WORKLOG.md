@@ -515,3 +515,12 @@ containing `models/dense`, `models/reranker` and `external/judge_labels_train.js
 this one, the previous tarball holds the uncapped models and no labels, kept as `models_old_uncapped.tar`).
 Report and README updated to the capped recipe. A full `run.sh` reproduction from the zip (cap 7GiB) and an
 evaluation of its models are running; results pending.
+
+## 2026-10-08 — run.sh reproduction from the zip
+
+`submission/r13921031.zip` unzipped on gsm-gpu2, data symlinked, `external/judge_labels_train.json` placed (as
+download.sh would), `HW2_VRAM_GB=7.0 bash run.sh`: exit 0, 2,419s total (candidates 3.34GiB peak, dense 4.99GiB,
+reranker 5.85GiB allocated). Then the TA's `retrieval.py` (381s, peak 4.35GB, models `models/dense` and
+`models/reranker` it just produced, default settings) and `evaluate.py --batch-size 8`: graded R@10 0.979, MRR@10
+0.895 (submitted tarball models: 0.978 / 0.898). `download.sh` with the new tarball is untested until the Drive file
+is replaced.

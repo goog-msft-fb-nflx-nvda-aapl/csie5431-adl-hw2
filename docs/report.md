@@ -67,7 +67,9 @@ fine-tuning 5.85 GiB. A reranker group of 16 candidates (1,800 characters) ran o
 the submitted recipe uses groups of 8 and 1,400 characters; the dense recipe uses mini-batches of 8 texts with gradient
 checkpointing. Times on the shared H200 (a 3070 will be slower; not measured): candidate generation about 6 min, judge
 labeling about 2 h 20 min (skipped by default, labels are downloaded), dense fine-tuning 16 min, reranker fine-tuning
-about 45 min. The exploration in the tables below was run before this constraint (no memory cap, larger settings); the
+about 45 min (with less GPU contention the whole `run.sh`, labels step skipped, took 40 min). Running the submitted
+`run.sh` end to end from the unzipped submission under the 7 GiB cap and then evaluating the models it produced gave graded
+R@10 0.979 / MRR@10 0.895 on public, matching the 0.978 / 0.898 of the models used above. The exploration in the tables below was run before this constraint (no memory cap, larger settings); the
 submitted models are the capped ones.
 ## Strategies tried and why the submitted one is best
 
