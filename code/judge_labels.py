@@ -9,13 +9,16 @@ import numpy as np
 
 sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 import evaluate as ev  # noqa: E402
+import vram  # noqa: E402
+
+vram.apply_cap()
 from eval_utils import build_eval_query, load_eval_queries, load_products  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--split", default="train")
 ap.add_argument("--cands", default="")
 ap.add_argument("--n", type=int, default=20)
-ap.add_argument("--bs", type=int, default=32)
+ap.add_argument("--bs", type=int, default=4)
 ap.add_argument("--limit", type=int, default=0)
 a = ap.parse_args()
 root = os.environ.get("HW2_DATA", "data")
@@ -48,6 +51,12 @@ for s in range(0, len(order), a.bs):
     if (s // a.bs) % 100 == 0:
         print(f"{s}/{len(items)} parse_fail={bad}", flush=True)
 np.save(f"cache/judge_{a.split}{a.cands}.npy", out)
+import json as _json
+os.makedirs("external", exist_ok=True)
+labels = {qs[i]["qid"]: {str(pids[top[i, r]]): int(out[i, r]) for r in range(a.n) if out[i, r] != 2}
+          for i in range(nq)}
+_json.dump(labels, open(f"external/judge_labels_{a.split}.json", "w"))
+vram.report("judge_labels")
 non_gold = out != 2
 print("accept rate among non-gold:", float((out == 1).sum() / non_gold.sum()),
       "queries with >=1 accepted alt in top-n:", float(((out == 1).any(1)).mean()), "parse_fail", bad)

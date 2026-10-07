@@ -10,6 +10,9 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 from zs_eval import bm25_scores, dense_scores, rrf  # noqa: E402
 from zs_eval import load_eval_queries, load_products  # noqa: E402
+import vram  # noqa: E402
+
+vram.apply_cap()
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--split", default="public")
@@ -33,6 +36,7 @@ gold = np.array([pid2i[q["gold_pid"]] for q in qs])
 np.savez(f"cache/cands_{a.split}{a.tag}.npz", pids=np.array(pids), qids=np.array([q["qid"] for q in qs]),
          gold=gold, top=top, rrf=np.take_along_axis(S, top, 1),
          dense_top=np.argsort(-sd, axis=1)[:, : a.n], bm25_top=np.argsort(-sb, axis=1)[:, : a.n])
+vram.report("cands")
 hit = (top == gold[:, None])
 print(a.split, "hybrid recall@{10,30,50,100,200}:",
       [round(float(hit[:, :k].any(1).mean()), 3) for k in (10, 30, 50, 100, 200)], flush=True)

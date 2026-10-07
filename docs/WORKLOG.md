@@ -467,3 +467,25 @@ Follow-up: removed the base models this project downloaded from `~/.cache/huggin
 bge-m3, bge-reranker-v2-m3, Qwen2.5-1.5B-Instruct, Qwen3-Embedding-0.6B, Qwen3-Reranker-0.6B, both BLaIR, MiniLM
 cross-encoder; about 14GB, picked by file dates from 2026-10-05/06). The remaining entries predate this project (other
 projects' models) and were left in place. Re-running the experiments re-downloads these from the Hub.
+
+## 2026-10-07 — TA reply: run.sh will be executed, training must fit 8GB VRAM
+
+TA answers (pasted by the user): (1) TA will run `run.sh`; (2) the training scripts must run within the RTX 3070's
+8GB VRAM, no more VRAM may be used when training; (3) TA will place `data/` (same as provided, with `train/`) in the
+submission folder. My earlier models were trained with 141GB-class memory and were not memory-checked, so training is
+being redone under a hard cap. GPU working dir had been wiped; rebuilt with `scripts/setup_gpu_env.sh` and
+`download_hw2_data.sh` (worked as in the previous reproducibility test).
+
+Changes: `code/vram.py` (`HW2_VRAM_GB` sets `torch.cuda.set_per_process_memory_fraction`, so allocations beyond the cap
+raise OOM; peak memory is printed); gradient checkpointing and CachedMNRL mini-batch 8 in `ft_biencoder.py`; reranker
+trained one dialogue per micro-step with gradient accumulation (`ft_reranker.py`); judge labels saved as
+`{qid: {pid: 0/1}}` JSON (`external/judge_labels_train.json`) so they do not depend on candidate rank order; judge
+batch size 4. All runs below use `HW2_VRAM_GB=7.0` (a 3070 has 8GB total including CUDA context overhead).
+
+Step 1 (`cands.py`) regenerated the zero-shot train candidates under the cap: peak 3.34GiB allocated; hybrid
+recall@10/30/50/100/200 0.632 / 0.747 / 0.792 / 0.839 / 0.879, identical to the earlier run.
+
+Dense "lite" recipe under the cap (`ft_biencoder.py --n-neg 3 --lr 3e-5 --epochs 2 --max-len 384 --mini-bs 8`, all 4,830
+dialogues, 76 steps, 15m44s on a shared H200): peak 4.99GiB allocated / 5.26GiB reserved. Public exact-ID at inference
+length 384: dense R@10 0.919 / MRR@10 0.782 / R@100 0.986; at 512: 0.914 / 0.779 / 0.988; hybrid with BM25 at 384: 0.912 /
+0.762 / 0.990. (Earlier uncapped 7-negative / 4-epoch model: dense 0.932 / 0.797.)

@@ -16,6 +16,9 @@ from sentence_transformers.training_args import BatchSamplers
 
 sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 from eval_utils import load_eval_queries, load_products  # noqa: E402
+import vram  # noqa: E402
+
+vram.apply_cap()
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--base", default="Qwen/Qwen3-Embedding-0.6B")
@@ -23,6 +26,7 @@ ap.add_argument("--out", required=True)
 ap.add_argument("--lr", type=float, default=1e-5)
 ap.add_argument("--epochs", type=float, default=2)
 ap.add_argument("--bs", type=int, default=128)
+ap.add_argument("--mini-bs", type=int, default=8)  # CachedMNRL mini-batch (texts), sets peak memory
 ap.add_argument("--scale", type=float, default=20.0)
 ap.add_argument("--n-neg", type=int, default=0)
 ap.add_argument("--neg-lo", type=int, default=5)
@@ -73,12 +77,14 @@ ds = Dataset.from_dict(rows).shuffle(seed=a.seed)
 
 model = SentenceTransformer(a.base, device="cuda", model_kwargs={"torch_dtype": torch.bfloat16})
 model.max_seq_length = a.max_len
+model[0].auto_model.gradient_checkpointing_enable()
 qprompt = model.prompts.get("query", "") if hasattr(model, "prompts") else ""
-loss = CachedMultipleNegativesRankingLoss(model, scale=a.scale, mini_batch_size=32)
+loss = CachedMultipleNegativesRankingLoss(model, scale=a.scale, mini_batch_size=a.mini_bs)
 args = Args(output_dir=a.out + "_tmp", num_train_epochs=a.epochs, per_device_train_batch_size=a.bs,
             learning_rate=a.lr, warmup_ratio=0.1, bf16=True, logging_steps=5, save_strategy="no",
             batch_sampler=BatchSamplers.NO_DUPLICATES, prompts={"query": qprompt},
             report_to="none", seed=a.seed, lr_scheduler_type="linear")
 SentenceTransformerTrainer(model=model, args=args, train_dataset=ds, loss=loss).train()
+vram.report("ft_biencoder")
 model.save_pretrained(a.out)
 print("saved", a.out, flush=True)

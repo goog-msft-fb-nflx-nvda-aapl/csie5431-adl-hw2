@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Fine-tune Qwen3-Reranker-0.6B (yes/no logit score) with listwise softmax CE on train dialogues.
-Candidates from cache/cands_train.npz top-N, labels from cache/judge_train.npy (judge accepts /
-rejects, gold = 2). Positive = gold (or, with --alt-prob, a judge-accepted alternative); negatives =
-judge-rejected candidates. Holds out the same product-disjoint dev split as ft_biencoder (seed 0)."""
+Candidates: cache/cands_train.npz top-N; labels: external/judge_labels_train.json ({qid: {pid: 1 accepted /
+0 rejected}}, from judge_labels.py). Positive = gold or (with prob --alt-prob) a judge-accepted alternative;
+negatives = judge-rejected candidates. One dialogue per micro-step (gradient checkpointing keeps memory small),
+--qbs dialogues per optimizer step. Holds out the same product-disjoint dev split as ft_biencoder (seed 0)."""
 import argparse
+import json
 import os
 import random
 import sys
@@ -14,17 +16,22 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 sys.path[:0] = [os.path.dirname(os.path.abspath(__file__)), "provided"]
 from eval_utils import load_eval_queries, load_products  # noqa: E402
+import vram  # noqa: E402
+
+vram.apply_cap()
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--base", default="Qwen/Qwen3-Reranker-0.6B")
 ap.add_argument("--out", required=True)
-ap.add_argument("--lr", type=float, default=1e-5)
+ap.add_argument("--labels", default="external/judge_labels_train.json")
+ap.add_argument("--lr", type=float, default=2e-5)
 ap.add_argument("--epochs", type=int, default=1)
-ap.add_argument("--group", type=int, default=8)  # 1 pos + group-1 negs
-ap.add_argument("--qbs", type=int, default=4)    # queries per step
+ap.add_argument("--group", type=int, default=16)  # 1 pos + group-1 negs
+ap.add_argument("--qbs", type=int, default=2)     # dialogues per optimizer step
 ap.add_argument("--doc-chars", type=int, default=1800)
 ap.add_argument("--max-len", type=int, default=1024)
-ap.add_argument("--alt-prob", type=float, default=0.0)
+ap.add_argument("--alt-prob", type=float, default=0.5)
+ap.add_argument("--n-cands", type=int, default=20)
 ap.add_argument("--use-all-train", action="store_true")
 ap.add_argument("--seed", type=int, default=0)
 a = ap.parse_args()
@@ -39,9 +46,8 @@ qs = load_eval_queries(f"{root}/train/dialogues.jsonl")
 prods = load_products(f"{root}/train/products.jsonl")
 c = dict(np.load("cache/cands_train.npz"))
 pids = c["pids"]
-J = np.load("cache/judge_train.npy")
-N = J.shape[1]
-top = c["top"][:, :N]
+labels = json.load(open(a.labels))
+top = c["top"][:, : a.n_cands]
 rng = random.Random(a.seed)
 targets = sorted({q["gold_pid"] for q in qs})
 rng.shuffle(targets)
@@ -66,12 +72,23 @@ def fmt(q, p):
 
 def make_group(i):
     g = str(pids[c["gold"][i]])
-    rej = [str(pids[top[i, r]]) for r in range(N) if J[i, r] == 0]
-    acc = [str(pids[top[i, r]]) for r in range(N) if J[i, r] == 1]
+    lab = labels.get(qs[i]["qid"], {})
+    cand = [str(pids[j]) for j in top[i]]
+    rej = [p for p in cand if lab.get(p) == 0]
+    acc = [p for p in cand if lab.get(p) == 1]
     pos = rng.choice(acc) if (acc and rng.random() < a.alt_prob) else g
     if len(rej) < a.group - 1:
         return None
     return [pos] + rng.sample(rej, a.group - 1)
+
+
+def micro_loss(i, group):
+    txt = [fmt(qs[i]["query"], p) for p in group]
+    enc = tok(txt, return_tensors="pt", padding=True, truncation=True, max_length=a.max_len).to("cuda")
+    h = model.model(**enc).last_hidden_state[:, -1, :]
+    lg = (h @ model.lm_head.weight[[yes, no]].T).float()
+    sc = (lg[:, 0] - lg[:, 1]).unsqueeze(0)
+    return torch.nn.functional.cross_entropy(sc, torch.zeros(1, dtype=torch.long, device="cuda"))
 
 
 model.train()
@@ -80,22 +97,23 @@ for ep in range(a.epochs):
     order = idx[:]
     rng.shuffle(order)
     for s in range(0, len(order) - a.qbs + 1, a.qbs):
-        groups = [(i, make_group(i)) for i in order[s: s + a.qbs]]
-        groups = [(i, g) for i, g in groups if g]
-        if not groups:
+        n_ok, last = 0, 0.0
+        for i in order[s: s + a.qbs]:
+            g = make_group(i)
+            if not g:
+                continue
+            loss = micro_loss(i, g) / a.qbs
+            loss.backward()
+            n_ok += 1
+            last = loss.item() * a.qbs
+        if not n_ok:
             continue
-        texts = [fmt(qs[i]["query"], p) for i, g in groups for p in g]
-        enc = tok(texts, return_tensors="pt", padding=True, truncation=True, max_length=a.max_len).to("cuda")
-        h = model.model(**enc).last_hidden_state[:, -1, :]
-        lg = (h @ model.lm_head.weight[[yes, no]].T).float()
-        sc = (lg[:, 0] - lg[:, 1]).view(len(groups), a.group)
-        loss = torch.nn.functional.cross_entropy(sc, torch.zeros(len(groups), dtype=torch.long, device="cuda"))
-        loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step(); sched.step(); opt.zero_grad(set_to_none=True)
         step += 1
         if step % 20 == 0:
-            print(f"ep {ep} step {step}/{steps_total} loss {loss.item():.4f}", flush=True)
+            print(f"ep {ep} step {step}/{steps_total} loss {last:.4f}", flush=True)
+vram.report("ft_reranker")
 model.config.use_cache = True
 model.save_pretrained(a.out)
 tok.save_pretrained(a.out)

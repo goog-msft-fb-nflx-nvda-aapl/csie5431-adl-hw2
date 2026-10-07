@@ -62,7 +62,7 @@ def dense_scores(queries, texts, key, max_len, cache):
     if cache and os.path.exists(cache):
         P = np.load(cache)
     else:
-        P = model.encode([pp + t for t in texts], batch_size=64, normalize_embeddings=True,
+        P = model.encode([pp + t for t in texts], batch_size=32, normalize_embeddings=True,
                          convert_to_numpy=True, show_progress_bar=False)
         if cache:
             np.save(cache, P)
