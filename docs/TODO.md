@@ -10,7 +10,7 @@
 - [x] Q2 generation analysis (3 prompts, 10 samples), in `docs/report.md`.
 - [x] Report draft `docs/report.md` -> `docs/report.pdf`; submission scaffolding
       (`submission_template/`, `scripts_make_submission.sh`).
-- [ ] Replace the Google Drive file behind the `download.sh` link with the new `submission_artifacts/models.tar`
+- [x] Replace the Google Drive file behind the `download.sh` link with the new `submission_artifacts/models.tar`
       (capped-training models + `external/judge_labels_train.json`); then test `download.sh` and rebuild the zip.
 - [x] TA reply (2026-10-07): `run.sh` is executed, training must fit 8GB; training redone under a 7GiB cap.
 - [ ] 3070 timing is unmeasured (no 3070 available); time guard in `retrieval_utils.py` is the mitigation.

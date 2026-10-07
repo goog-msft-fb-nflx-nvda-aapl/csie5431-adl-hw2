@@ -524,3 +524,10 @@ reranker 5.85GiB allocated). Then the TA's `retrieval.py` (381s, peak 4.35GB, mo
 `models/reranker` it just produced, default settings) and `evaluate.py --batch-size 8`: graded R@10 0.979, MRR@10
 0.895 (submitted tarball models: 0.978 / 0.898). `download.sh` with the new tarball is untested until the Drive file
 is replaced.
+
+## 2026-10-08 — download.sh with the new Drive file
+
+New tarball (capped-training models + judge labels) uploaded as a new Drive file; `download.sh` link updated. Fresh
+unzip of `submission/r13921031.zip` on gsm-gpu2: `download.sh` exit 0, `models/dense/model.safetensors`,
+`models/reranker/model.safetensors` and `external/judge_labels_train.json` byte-identical to the packaged ones, then the
+TA's `retrieval.py` (382s, peak 4.35GB) and `evaluate.py --batch-size 8`: graded R@10 0.978, MRR@10 0.8977.

@@ -4,7 +4,7 @@
 # Qwen2.5-1.5B-Instruct judge, see README). No other external data is used.
 set -euo pipefail
 cd "$(dirname "$0")"
-MODELS_URL="${MODELS_URL:-https://drive.google.com/file/d/11UhLDC84CfulU4-plYaUMDsj4ZACADPN/view?usp=sharing}"
+MODELS_URL="${MODELS_URL:-https://drive.google.com/file/d/1p9lTiKSOAPJUaL3dCpUZlNjAoPQJMX4d/view?usp=sharing}"
 FILE_ID="$(echo "$MODELS_URL" | sed -E 's#.*/d/([^/?]+).*#\1#')"
 python -m gdown "$FILE_ID" -O models.tar
 tar -xf models.tar
