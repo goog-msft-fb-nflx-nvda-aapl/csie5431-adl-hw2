@@ -2,5 +2,5 @@
  {"name":"+ zero-shot\nQwen3-Reranker","R@10":0.938,"MRR@10":0.803},
  {"name":"ft dense (ftB)\n+ zero-shot reranker","R@10":0.960,"MRR@10":0.824},
  {"name":"ft dense (ftB)\n+ ft reranker (R1)","R@10":0.975,"MRR@10":0.883},
- {"name":"ftF + BM25\n+ R2 (all train)","R@10":0.977,"MRR@10":0.887},
- {"name":"final: ftJ + BM25\n+ R5 (all train)","R@10":0.986,"MRR@10":0.908}]
+ {"name":"uncapped final:\nftJ + BM25 + R5","R@10":0.986,"MRR@10":0.908},
+ {"name":"submitted (7GiB-capped\ntraining): dense_lite\n+ BM25 + rr_g8","R@10":0.978,"MRR@10":0.898}]

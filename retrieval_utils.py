@@ -25,14 +25,14 @@ RERANK_BASE = "Qwen/Qwen3-Reranker-0.6B"
 DENSE_MODEL = os.environ.get("HW2_DENSE", os.path.join(_HERE, "models", "dense"))
 RERANK_MODEL = os.environ.get("HW2_RERANK", os.path.join(_HERE, "models", "reranker"))
 USE_BM25 = os.environ.get("HW2_BM25", "1") == "1"
-DENSE_MAX_LEN = int(os.environ.get("HW2_DENSE_LEN", "512"))  # upper bound; may be lowered by the time guard
+DENSE_MAX_LEN = int(os.environ.get("HW2_DENSE_LEN", "384"))  # upper bound; may be lowered by the time guard
 BUDGET_S = float(os.environ.get("HW2_BUDGET", "3000"))  # wall-clock guard for the whole call (limit is 3600s)
 DENSE_SHARE = 0.45  # at most this share of the budget goes to pool encoding
 SAFETY_S = 300.0
 DENSE_BS = int(os.environ.get("HW2_DENSE_BS", "32"))
 SHORTLIST = int(os.environ.get("HW2_SHORTLIST", "200"))
 RERANK_DEPTH = int(os.environ.get("HW2_DEPTH", "30"))  # 0 disables reranking
-RERANK_DOC_CHARS = int(os.environ.get("HW2_DOC_CHARS", "1800"))
+RERANK_DOC_CHARS = int(os.environ.get("HW2_DOC_CHARS", "1400"))
 RERANK_MAX_LEN = 1024
 RERANK_BS = int(os.environ.get("HW2_RERANK_BS", "16"))
 RRF_K = 60

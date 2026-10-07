@@ -489,3 +489,29 @@ Dense "lite" recipe under the cap (`ft_biencoder.py --n-neg 3 --lr 3e-5 --epochs
 dialogues, 76 steps, 15m44s on a shared H200): peak 4.99GiB allocated / 5.26GiB reserved. Public exact-ID at inference
 length 384: dense R@10 0.919 / MRR@10 0.782 / R@100 0.986; at 512: 0.914 / 0.779 / 0.988; hybrid with BM25 at 384: 0.912 /
 0.762 / 0.990. (Earlier uncapped 7-negative / 4-epoch model: dense 0.932 / 0.797.)
+
+## 2026-10-07 — Capped training recipe, models retrained, packaging changed (exp 17)
+
+Judge labels regenerated under the cap (`judge_labels.py --bs 4`, 93,198 judgments, 0 parse failures, accept rate
+8.2%, 54.8% of dialogues have an accepted alternative in their top 20; peak 4.07GiB allocated / 6.97GiB reserved;
+about 2h20m on a shared H200). Saved as `external/judge_labels_train.json` (1.7MB).
+
+Reranker under the 7GiB cap: group of 16 candidates x 1,800 chars OOMed (6.26GiB allocated when it hit the cap). Group
+of 8 x 1,400 chars (`ft_reranker.py --group 8 --qbs 2 --lr 2e-5 --doc-chars 1400 --alt-prob 0.5 --use-all-train`, one
+dialogue per micro-step, 2,415 optimizer steps, 1 epoch) fits: peak 5.85GiB allocated / 6.36GiB reserved, about 45 min
+on a shared H200.
+
+Submitted models (dense_lite + rr_g8, both trained on all 4,830 train dialogues under the cap), run end to end through
+the TA's `retrieval.py` + `evaluate.py --batch-size 8` with BM25 fusion, dense length 384, rerank top 30, 1,400 chars:
+graded R@10 0.978, MRR@10 0.898; retrieval 382s (dense stage incl. BM25 232s, rerank 148s), peak VRAM 3.24GB.
+Uncapped best was 0.986 / 0.908 (exp 16). Both exceed the public Boss thresholds (0.950 / 0.800). Exact-ID by
+category (200 each, R@10 / MRR@10): beauty 0.965 / 0.857, home & kitchen 0.970 / 0.914, pet supplies 0.960 / 0.844,
+sports & outdoors 0.960 / 0.905, toys & games 0.890 / 0.763; seen / unseen gold (500 each) 0.948 / 0.853 and 0.950 / 0.860.
+
+Packaging: `retrieval_utils.py` defaults changed to dense length 384 and 1,400 chars; `run.sh` now runs the capped
+recipe (labels step skipped when `external/judge_labels_train.json` exists); `download.sh` fetches a tarball
+containing `models/dense`, `models/reranker` and `external/judge_labels_train.json` (new file
+`submission_artifacts/models.tar`, 2.4GB; the Google Drive file behind the link in `download.sh` has to be replaced by
+this one, the previous tarball holds the uncapped models and no labels, kept as `models_old_uncapped.tar`).
+Report and README updated to the capped recipe. A full `run.sh` reproduction from the zip (cap 7GiB) and an
+evaluation of its models are running; results pending.
