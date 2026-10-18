@@ -19,6 +19,7 @@ ap.add_argument("--split", default="public")
 ap.add_argument("--model", default="qwen3-0.6b")
 ap.add_argument("--n", type=int, default=200)
 ap.add_argument("--tag", default="")
+ap.add_argument("--len", type=int, default=512)
 a = ap.parse_args()
 root = os.environ.get("HW2_DATA", "data")
 qs = load_eval_queries(f"{root}/{a.split}/dialogues.jsonl")
@@ -28,7 +29,7 @@ texts = [prods[p] for p in pids]
 queries = [q["query"] for q in qs]
 os.makedirs("cache", exist_ok=True)
 sb = bm25_scores(queries, pids, texts)
-sd = dense_scores(queries, texts, a.model, 512, f"cache/{a.split}_{a.model.replace(chr(47), chr(95))}_L512.npy")
+sd = dense_scores(queries, texts, a.model, a.len, f"cache/{a.split}_{a.model.replace(chr(47), chr(95))}_L{a.len}.npy")
 S = rrf([sb, sd])
 top = np.argsort(-S, axis=1)[:, : a.n]
 pid2i = {p: i for i, p in enumerate(pids)}

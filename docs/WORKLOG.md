@@ -531,3 +531,28 @@ New tarball (capped-training models + judge labels) uploaded as a new Drive file
 unzip of `submission/r13921031.zip` on gsm-gpu2: `download.sh` exit 0, `models/dense/model.safetensors`,
 `models/reranker/model.safetensors` and `external/judge_labels_train.json` byte-identical to the packaged ones, then the
 TA's `retrieval.py` (382s, peak 4.35GB) and `evaluate.py --batch-size 8`: graded R@10 0.978, MRR@10 0.8977.
+
+## 2026-10-18 — Lecture methods we had not tried (exp 18; lecture `261005_RAG.pdf`, slides cited)
+
+Checked the lecture against our work: covered = sparse (BM25), off-the-shelf and contrastively fine-tuned dense retrieval, bi-encoder +
+cross-encoder, fusion, pointwise reranking, Q2 prompt comparison. Not yet tried = query likelihood (slides 19-21), pairwise reranking
+(28-30), reranker-to-retriever distillation (31), query rewriting / iterative retrieval (27, 32). Experiments below use the submitted
+capped models (`dense_lite`, `rr_g8`) on public, all exact-ID metrics from the cached shortlist (BM25 + dense_lite at 384 tokens, RRF;
+hybrid exact recall@10/30/50/100/200 = 0.912 / 0.966 / 0.978 / 0.990 / 0.994) rerank top 30. Reference: first stage 0.912 / 0.758
+(R@10 / MRR@10), fine-tuned reranker `rr_g8` over it 0.948 / 0.856. Code: `code/lecture_*.py`, raw rows `results_archive/lecture.jsonl`.
+
+1. **Query likelihood** (`lecture_ql.py`): mean log P(conversation text | product listing, instruction) under Qwen2.5-1.5B-Instruct,
+   zero-shot, no training, 30,000 pairs (about 10 min on an H200). Alone: 0.940 / 0.802 (first stage 0.912 / 0.758, so it improves the
+   first stage by itself but is below the fine-tuned reranker 0.948 / 0.856). Added to the reranker score as z(rr) + w * z(ql):
+   w = 0.1 / 0.25 / 0.5 / 1 / 2 / 3 / 5 gives MRR@10 0.861 / 0.865 / 0.871 / **0.877** / 0.866 / 0.854 / 0.845 and R@10 0.950 / 0.953 /
+   0.957 / **0.959** / 0.956 / 0.952 / 0.950. Applied only to the reranker's top 5 / 10 / 15 / 20 (w = 1): MRR@10 0.867 / 0.873 / 0.876 /
+   0.876, R@10 0.948 / 0.948 / 0.956 / 0.959. The weight was picked on public.
+2. **Pairwise reranking** (`lecture_pairwise.py`): Qwen2.5-1.5B-Instruct compares the reranker's top 5 two at a time (both orders,
+   mean win probability, 20 comparisons per dialogue). Pairwise alone on the top 5: MRR@10 0.602 (reranker 0.856); combined with the
+   reranker z(rr) + a * z(pw), a = 0.25 / 0.5 / 1: 0.854 / 0.846 / 0.809. Negative result for this prompt and this 1.5B model.
+3. **Query rewriting and HyDE** (`lecture_hyde.py`): Qwen2.5-1.5B-Instruct writes a standalone query ("rewrite") or a hypothetical
+   product listing ("hyde"). First stage exact R@10 / R@30 / MRR@10: original conversation dense 0.919 / 0.964 / 0.781; rewrite dense
+   0.791 / 0.881 / 0.592; hyde dense (as document) 0.765 / 0.865 / 0.558; BM25 on original 0.765 / 0.849 / 0.595, BM25 on original+hyde
+   0.643 / 0.770 / 0.451. Fusion: submitted first stage (RRF dense + BM25) 0.912 / 0.966 / 0.756; plus the rewrite's dense list
+   0.939 / 0.973 / 0.778; plus the hyde dense list 0.927 / 0.966 / 0.762. After reranking the top 30 of the best fused list (dense + BM25 +
+   rewrite dense): 0.953 / 0.846 versus 0.948 / 0.856 without rewriting, i.e. a first-stage gain that does not carry through to MRR@10.
