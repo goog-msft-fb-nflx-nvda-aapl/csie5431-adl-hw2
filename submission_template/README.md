@@ -9,7 +9,9 @@ Repository (private until after the deadline): https://github.com/goog-msft-fb-n
 
 `retrieve_and_rerank()` encodes every product with a fine-tuned Qwen3-Embedding-0.6B (dense, 384 tokens), also ranks
 products with BM25, fuses both top-200 lists with reciprocal rank fusion (k=60), reranks the top 30
-with a fine-tuned Qwen3-Reranker-0.6B (yes/no logit score, 1,400 characters of product text) and returns the top 10.
+with a fine-tuned Qwen3-Reranker-0.6B (yes/no logit score, 1,400 characters of product text), rescores the reranker's top 15 with
+zero-shot query likelihood from `Qwen/Qwen2.5-1.5B-Instruct` (fetched from the Hugging Face hub at inference; optional, skipped
+if unavailable or if time is short) and returns the top 10.
 A wall-clock guard lowers the encoding length / rerank depth if the measured speed would exceed the 1-hour limit.
 Details, ablations and numbers are in `report.pdf`.
 
@@ -24,7 +26,7 @@ Details, ablations and numbers are in `report.pdf`.
    then `python evaluate.py --retrieval-results results/retrieval_results.json --dialogues data/public/dialogues.jsonl --products data/public/products.jsonl --output results/evaluation.json --batch-size 8`.
 
 Knobs (environment variables read by `retrieval_utils.py`, defaults are the submitted setting):
-`HW2_DENSE_LEN` (384), `HW2_DEPTH` (30), `HW2_DOC_CHARS` (1400), `HW2_BM25` (1), `HW2_BUDGET` (3000 seconds, the time
+`HW2_DENSE_LEN` (384), `HW2_DEPTH` (30), `HW2_DOC_CHARS` (1400), `HW2_BM25` (1), `HW2_QL` (1, query-likelihood stage), `HW2_QL_DEPTH` (15), `HW2_QL_W` (1.0), `HW2_BUDGET` (3000 seconds, the time
 guard), `HW2_DENSE` / `HW2_RERANK` (model directories).
 
 ## External data

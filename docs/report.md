@@ -23,8 +23,13 @@ Hyperparameters were chosen using public metrics (see Limitations).
 3. **Fusion**: reciprocal rank fusion (k = 60) of the two top-200 lists.
 4. **Rerank** the top 30 with Qwen3-Reranker-0.6B fine-tuned (score = logit("yes") - logit("no") at the last
    position, fp16, 1,400 characters of product text per candidate), return the top 10.
-5. A wall-clock guard shrinks the dense max length and the rerank depth if the measured speed projects past
-   a 3,000 s budget, so a slower GPU degrades quality instead of exceeding the one-hour limit.
+5. **Query-likelihood rescoring** (from the lecture's query-likelihood slides; zero-shot, no training): Qwen2.5-1.5B-Instruct
+   computes the mean log-probability of the conversation text given the product listing for the reranker's top 15; this is
+   z-scored, added to the z-scored reranker score within those 15 and the 15 are re-sorted. It is an optional last stage: skipped for
+   queries when time is short, and skipped altogether if the model cannot be loaded.
+6. A wall-clock guard shrinks the dense max length and the rerank depth if the measured speed projects past
+   a 3,000 s budget (reranking has priority, query likelihood only uses the time left), so a slower GPU degrades quality
+   instead of exceeding the one-hour limit.
 
 ## Training data construction
 
@@ -86,13 +91,19 @@ Exact-ID R@10 / MRR@10 unless marked graded. Single runs unless a spread is give
 | 6 | + 1 hard negative; 3; 7 (lr 3e-5, 4 ep) | 0.878; 0.885; 0.932 (dense) | 0.694; 0.713; 0.797 |
 | 7 | #6 (1 hard neg) + BM25 + zero-shot Qwen3-Reranker | 0.920 | 0.745 |
 | 8 | #7 with fine-tuned reranker (gold positive; or p = 0.5 alternatives; 16-group lr 2e-5) | 0.938; 0.938; 0.940 | 0.835; 0.843; 0.857 |
-| 9 | **submitted, trained under the 7 GiB cap**: dense (3 negatives, 2 epochs, length 384) alone | 0.919 (dense, length 384) | 0.782 |
+| 9 | **trained under the 7 GiB cap**: dense (3 negatives, 2 epochs, length 384) alone | 0.919 (dense, length 384) | 0.782 |
+| 10 | #9 + BM25 (RRF) shortlist, capped reranker (top 30) | 0.948 | 0.856 |
+| 11 | #10 + query-likelihood rescoring of the reranker's top 30 / top 15 (lecture method, zero-shot) | 0.959 / 0.956 | 0.877 / 0.876 |
+| 12 | #10 with pairwise reranking of the top 5 by Qwen2.5-1.5B instead (alone / combined, weight 0.25) | 0.948 / 0.948 | 0.602 / 0.854 |
+| 13 | #10 with the query rewritten or HyDE-expanded before retrieval (best fused first stage) | 0.953 | 0.846 |
+| 14 | dense retriever distilled from the reranker's scores instead of mined negatives (dense alone) | 0.898 | 0.750 |
 
 Judge-graded R@10 / MRR@10 of full pipelines: zero-shot hybrid 0.877 / 0.646; + zero-shot Qwen3-Reranker 0.938 /
 0.803; fine-tuned dense (1 negative) + zero-shot reranker 0.960 / 0.824; same + fine-tuned reranker 0.975 / 0.883;
 ftF dense (3 negatives) + BM25 + R2 reranker (both trained on all data) 0.977 / 0.887; the best uncapped pipeline
-(7-negative 4-epoch dense, 16-candidate reranker groups) 0.986 / 0.908; **submitted pipeline, trained under the 7 GiB
-cap (3-negative 2-epoch dense + BM25 + 8-candidate-group reranker, rerank top 30) 0.978 / 0.898** (spec thresholds on public: Simple 0.860 / 0.650, Strong 0.885 / 0.680, Boss 0.950 / 0.800).
+(7-negative 4-epoch dense, 16-candidate reranker groups) 0.986 / 0.908; **capped pipeline, trained under the 7 GiB
+cap (3-negative 2-epoch dense + BM25 + 8-candidate-group reranker, rerank top 30) 0.978 / 0.898; submitted pipeline
+with the query-likelihood stage added 0.982 / 0.917** (spec thresholds on public: Simple 0.860 / 0.650, Strong 0.885 / 0.680, Boss 0.950 / 0.800).
 Private metrics cannot be measured here.
 
 ![Exact-ID recall at k of the first-stage variants.](../figures/recall_at_k.png){width=55%}
@@ -108,7 +119,9 @@ judge-labelled negatives took exact MRR@10 on the same shortlist from 0.745 to a
 fusion helped in an earlier uncapped configuration (graded 0.977 / 0.887 with, 0.969 / 0.873 without, for the ftF + R2 pair; not re-measured for the capped models),
 but not in every dense-only comparison (for the strongest dense models, R@10 / MRR@10 was equal or lower with
 fusion while R@100 was higher). BLaIR (pretrained on Amazon Reviews 2023, likely overlapping this benchmark's
-products) was only run zero-shot as a disclosed ablation and is not used.
+products) was only run zero-shot as a disclosed ablation and is not used. (d) Of the lecture methods we added afterwards, only
+query-likelihood rescoring helped (graded 0.976 / 0.898 to 0.983 / 0.917 on the same shortlist, no training); pairwise reranking,
+query rewriting / HyDE and reranker distillation did not help in our settings (see "Lecture methods" below).
 
 ## Ablations and analyses
 
@@ -120,20 +133,46 @@ products) was only run zero-shot as a disclosed ablation and is not used.
 * **Dense max length at inference** (ftD): 256 / 384 / 512 tokens gave dense R@10 0.894 / 0.907 / 0.912; end to end
   (graded R@10 / MRR@10) 256 tokens + depth 20 + 1,200 characters 0.970 / 0.880 in 226 s versus 512 / 30 / 1,800
   0.977 / 0.891 in 412 s (ftD + R2 models).
-* **Seen vs unseen gold** (submitted pipeline, exact R@10 / MRR@10): seen-in-train-pool targets (500) 0.948 / 0.853,
-  never-seen targets (500) 0.950 / 0.860. Earlier systems also showed seen and unseen within about 2 points at R@10.
-* **Per category** (200 queries each, exact R@10 / MRR@10): beauty 0.965 / 0.857, home & kitchen 0.970 / 0.914,
-  pet supplies 0.960 / 0.844, sports & outdoors 0.960 / 0.905, toys & games 0.890 / 0.763.
+* **Seen vs unseen gold** (submitted pipeline, exact R@10 / MRR@10): seen-in-train-pool targets (500) 0.956 / 0.879,
+  never-seen targets (500) 0.958 / 0.876. Earlier systems also showed seen and unseen within about 2 points at R@10.
+* **Per category** (200 queries each, exact R@10 / MRR@10): beauty 0.970 / 0.889, home & kitchen 0.980 / 0.931,
+  pet supplies 0.980 / 0.867, sports & outdoors 0.960 / 0.907, toys & games 0.895 / 0.795.
 
 ![Submitted pipeline, per category and seen vs unseen gold (exact).](../figures/category_seen.png){width=80%}
 
+## Lecture methods tried after the main pipeline
+
+We went back through the RAG lecture for retrieval methods we had not used. All numbers are exact-ID on public, using the
+capped models' shortlist (BM25 + dense, RRF; recall@10 / @30 0.912 / 0.966) reranked over its top 30 (R@10 / MRR@10 0.948 / 0.856), unless noted.
+
+* **Query likelihood** (UPR-style; slides on query-likelihood retrieval). Score = mean log P(conversation | product listing, instruction)
+  under Qwen2.5-1.5B-Instruct, zero-shot. Alone on the shortlist: 0.940 / 0.802 (the first stage is 0.912 / 0.758). Added to the reranker as
+  z(rerank) + w * z(ql): w = 0.1 / 0.25 / 0.5 / 1 / 2 / 3 / 5 gives MRR@10 0.861 / 0.865 / 0.871 / 0.877 / 0.866 / 0.854 / 0.845.
+  Restricted to the reranker's top 5 / 10 / 15 / 20 (w = 1): MRR@10 0.867 / 0.873 / 0.876 / 0.876. Judge-graded on the same shortlist:
+  0.976 / 0.898 without, 0.983 / 0.917 with. Adopted for the top 15 (a third of the cost for nearly the same gain); the depth and
+  weight were picked on public.
+* **Pairwise reranking** (instruction-based pairwise reranking). Qwen2.5-1.5B-Instruct compares the reranker's top 5 two at a time in both
+  orders; mean win probability per product. Alone 0.602 MRR@10, combined with the reranker (weight 0.25 / 0.5 / 1) 0.854 / 0.846 / 0.809,
+  versus 0.856 for the reranker alone. Not helpful with this model and prompt.
+* **Query rewriting and HyDE** (pre-retrieval rewriting). Qwen2.5-1.5B-Instruct rewrites the conversation into one search query or writes
+  a hypothetical product listing. Alone, dense R@10 drops from 0.919 (original conversation) to 0.791 (rewrite) / 0.765 (HyDE). Adding the
+  rewrite's dense list to the fusion raises first-stage recall@10 / @30 from 0.912 / 0.966 to 0.939 / 0.973, but after reranking the top 30
+  the result is 0.953 / 0.846 versus 0.948 / 0.856, so no gain in MRR@10.
+* **Distilling the reranker into the retriever** (PairDistill idea, our own listwise variant). Teacher: the fine-tuned reranker's scores
+  on each training dialogue's top-20 candidates; student: Qwen3-Embedding-0.6B trained with KL to the teacher softmax (temperature 2) over the
+  gold + 15 candidates, one dialogue per step, under the same 7 GiB cap (peak 5.64 GiB). Dense alone: R@10 0.898 / MRR@10 0.750 / R@100 0.971
+  versus 0.919 / 0.782 / 0.986 for the mined-negative recipe. One configuration, not tuned.
+
 ## Resources
 
-On the H200 (shared), submitted settings: `retrieval.py` 382 s (dense stage including BM25 232 s, rerank of 30,000 pairs
-148 s), peak allocated GPU memory 3.24 GB (graded R@10 0.978, MRR@10 0.898). Training steps: see "Training fits the 8GB GPU". `evaluate.py` (judge, the TA's script) peaked at 17 GB reserved with batch size 16 on the H200 and 8.4 GB
+On the H200 (shared), submitted settings: `retrieval.py` 453 s (dense stage including BM25 229 s, rerank of 30,000 pairs
+148 s, query likelihood of 15,000 pairs 73 s), peak allocated GPU memory 3.67 GB (graded R@10 0.982, MRR@10 0.917). The query-likelihood
+stage loads `Qwen/Qwen2.5-1.5B-Instruct` from the Hugging Face hub at inference time (the model the TA's judge also uses; it is not part of
+the downloaded tarball) and is skipped if it cannot be loaded. Training steps: see "Training fits the 8GB GPU". `evaluate.py` (judge, the TA's script) peaked at 17 GB reserved with batch size 16 on the H200 and 8.4 GB
 reserved with batch size 8, so the judge's memory depends on its batch size and is larger than our pipeline's. Estimate for a 3070 (interpretation, not measured): about
-25-45 minutes from FLOP counting, which is why the time guard exists; in a simulated 500 s budget the guard
-chose 256 tokens and depth about 4 and still scored 0.950 / 0.855 graded.
+25-45 minutes from FLOP counting for the dense and rerank stages, plus roughly 5-10 for query likelihood, which is why the time guard exists; in a simulated 500 s budget the guard
+chose 256 tokens and depth about 4 and still scored 0.950 / 0.855 graded (that test predates the query-likelihood stage; with it, a simulated
+600 s budget gave 0.968 / 0.893).
 
 # Q2. Generation analysis
 

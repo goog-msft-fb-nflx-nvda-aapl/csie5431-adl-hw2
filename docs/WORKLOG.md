@@ -580,3 +580,8 @@ hybrid exact recall@10/30/50/100/200 = 0.912 / 0.966 / 0.978 / 0.990 / 0.994) re
    Per category (200 each, exact R@10 / MRR@10): beauty 0.970 / 0.889, home & kitchen 0.980 / 0.931, pet supplies 0.980 / 0.867,
    sports & outdoors 0.960 / 0.907, toys & games 0.895 / 0.795; seen / unseen gold (500 each) 0.956 / 0.879 and 0.958 / 0.876.
    Training and the Drive tarball are unchanged (query likelihood needs no training).
+
+Final check from the rebuilt zip (fresh unzip on gsm-gpu2, `download.sh` exit 0 with the existing Drive file, TA's `retrieval.py` +
+`evaluate.py --batch-size 8`, default settings incl. query likelihood): retrieval 453s, peak VRAM 3.67GB, result below. Report
+(`docs/report.pdf`, 7 pages) and `submission_template/README.md` updated for the query-likelihood stage and the lecture-method ablations.
+Result: graded R@10 0.982, MRR@10 0.9167.
