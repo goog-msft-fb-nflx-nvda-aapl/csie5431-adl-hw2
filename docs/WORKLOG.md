@@ -556,3 +556,27 @@ hybrid exact recall@10/30/50/100/200 = 0.912 / 0.966 / 0.978 / 0.990 / 0.994) re
    0.643 / 0.770 / 0.451. Fusion: submitted first stage (RRF dense + BM25) 0.912 / 0.966 / 0.756; plus the rewrite's dense list
    0.939 / 0.973 / 0.778; plus the hyde dense list 0.927 / 0.966 / 0.762. After reranking the top 30 of the best fused list (dense + BM25 +
    rewrite dense): 0.953 / 0.846 versus 0.948 / 0.856 without rewriting, i.e. a first-stage gain that does not carry through to MRR@10.
+
+### Exp 18 continued (2026-10-18): graded results, distillation, adoption of query likelihood
+
+4. **Reranker-to-retriever distillation** (`lecture_distill.py`, lecture slide 31 idea, our own listwise variant): teacher = `rr_g8`
+   scores on each train dialogue's top-20 zero-shot candidates (+gold); student = Qwen3-Embedding-0.6B fine-tuned with
+   KL(softmax(teacher / 2) || softmax(20 * cos)) over the gold + 15 candidates of one dialogue, no in-batch negatives, lr 2e-5, 1 epoch,
+   8 dialogues per step, gradient checkpointing, length 384, under the 7GiB cap: peak 5.64GiB allocated. Public exact dense
+   R@10 / MRR@10 / R@100: 0.898 / 0.750 / 0.971 versus `dense_lite` (trained with mined hard negatives) 0.919 / 0.782 / 0.986. Negative result
+   for this configuration (one setting, one seed; hybrid with BM25 not run).
+5. **Judge-graded check of query likelihood** on the same shortlist (official `evaluate.py`, batch 8): reranker alone graded R@10 0.976 /
+   MRR@10 0.898; reranker + query likelihood on all 30 (w = 1) 0.983 / 0.917.
+6. **Adopted** as a final, optional, time-guarded stage in `retrieval_utils.py` (`HW2_QL=1`, default): after the reranker, Qwen2.5-1.5B-Instruct
+   (zero-shot, loaded from the Hugging Face hub, not shipped in the tarball) scores mean log P(conversation | product) for the reranker's top
+   15, combined as z(rerank) + z(ql) within those 15 and re-sorted; skipped per query when the time budget is short, and skipped entirely
+   (reranker order kept) if the model cannot be loaded. End to end with the submitted capped models through `retrieval.py` +
+   `evaluate.py --batch-size 8`: graded R@10 0.982, MRR@10 0.9167 (without it 0.978 / 0.898); retrieval 453s (dense stage incl. BM25 229s,
+   rerank 148s, query likelihood 73s for 15,000 pairs), peak VRAM 3.67GB, H200. The top-15 depth and weight 1.0 were chosen from the exact-ID
+   sweep on public (all 30: 0.959 / 0.877; top 15: 0.956 / 0.876; top 10: 0.948 / 0.873).
+   Time-guard tests (simulated): budget 900s unchanged result (0.982 / 0.918); budget 600s: dense 384 tokens, rerank depth 12-15, query likelihood
+   on 232 of 1,000 dialogues, 320s, graded 0.968 / 0.893. An earlier version that gave the rerank only 75% of the budget gave the reranker almost no
+   time at budget 600 (0.949 / 0.798), so the rerank now has priority and query likelihood only uses what is left.
+   Per category (200 each, exact R@10 / MRR@10): beauty 0.970 / 0.889, home & kitchen 0.980 / 0.931, pet supplies 0.980 / 0.867,
+   sports & outdoors 0.960 / 0.907, toys & games 0.895 / 0.795; seen / unseen gold (500 each) 0.956 / 0.879 and 0.958 / 0.876.
+   Training and the Drive tarball are unchanged (query likelihood needs no training).

@@ -1,0 +1,18 @@
+{
+ "metrics": {
+  "queries": 1000,
+  "graded_recall@10": 0.982,
+  "graded_mrr@10": 0.9166857142857144
+ },
+ "judge": {
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "dtype": "bfloat16",
+  "alternative_gain": 1,
+  "comparisons": 9043,
+  "runtime_seconds": 237.24710058700293,
+  "comparisons_per_second": 38.116377302928356,
+  "peak_cuda_memory_gib": 4.653174877166748,
+  "peak_cuda_memory_reserved_gib": 9.103515625,
+  "parse_failures": 0
+ }
+}

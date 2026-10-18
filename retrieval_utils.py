@@ -2,7 +2,8 @@
 """Student-editable retrieval and reranking implementation.
 
 Pipeline: fine-tuned Qwen3-Embedding-0.6B dense retrieval (optionally fused with BM25 via RRF) ->
-top-N shortlist -> fine-tuned Qwen3-Reranker-0.6B (yes/no logit) on the top RERANK_DEPTH -> top_k.
+top-N shortlist -> fine-tuned Qwen3-Reranker-0.6B (yes/no logit) on the top RERANK_DEPTH -> query-likelihood
+rescoring (Qwen2.5-1.5B-Instruct, zero-shot) of the reranker's top QL_DEPTH, time-guarded -> top_k.
 Models are read from ./models/{dense,reranker} next to this file (put there by download.sh); if a
 directory is missing the corresponding public base model is loaded from the Hugging Face hub.
 """
@@ -36,6 +37,13 @@ RERANK_DOC_CHARS = int(os.environ.get("HW2_DOC_CHARS", "1400"))
 RERANK_MAX_LEN = 1024
 RERANK_BS = int(os.environ.get("HW2_RERANK_BS", "16"))
 RRF_K = 60
+USE_QL = os.environ.get("HW2_QL", "1") == "1"
+QL_DEPTH = int(os.environ.get("HW2_QL_DEPTH", "15"))
+QL_WEIGHT = float(os.environ.get("HW2_QL_W", "1.0"))
+QL_MODEL = os.environ.get("HW2_QL_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+RERANK_SHARE = 1.0  # reranking has priority: it may use the whole budget (minus the safety margin); query likelihood only gets what is left
+_QL_HEAD = ("Product listing:\n{doc}\n\nThe conversation below is between a shopper and a sales assistant, and it ended "
+            "with this product being the right recommendation.\n\n")
 
 _INSTR = "Given a web search query, retrieve relevant passages that answer the query"
 _PREFIX = ("<|im_start|>system\nJudge whether the Document meets the requirements based on the Query and "
@@ -137,7 +145,7 @@ def _rrf_topn(lists: list[np.ndarray], n: int) -> np.ndarray:
     return out
 
 
-def _rerank(qtexts: list[str], texts: list[str], cand: np.ndarray, depth_max: int, t_start: float):
+def _rerank(qtexts: list[str], texts: list[str], cand: np.ndarray, depth_max: int, t_start: float, budget: float):
     """Rerank the top-d of each query's shortlist; d shrinks if the projected time exceeds the budget."""
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -148,11 +156,12 @@ def _rerank(qtexts: list[str], texts: list[str], cand: np.ndarray, depth_max: in
     yes, no = tok.convert_tokens_to_ids("yes"), tok.convert_tokens_to_ids("no")
     w = model.lm_head.weight[[yes, no]]
     out = cand.copy()
+    out_sc = np.full(cand.shape, -1e9, dtype=np.float32)
     nq, chunk = len(qtexts), 16
     pairs_done, t_scoring, depths = 0, 0.0, []
     for s in range(0, nq, chunk):
         qs = range(s, min(s + chunk, nq))
-        avail = BUDGET_S - (time.time() - t_start) - SAFETY_S
+        avail = budget - (time.time() - t_start) - SAFETY_S
         if pairs_done:
             d = int(min(depth_max, 0.9 * avail * (pairs_done / t_scoring) / (nq - s)))
         else:
@@ -175,13 +184,74 @@ def _rerank(qtexts: list[str], texts: list[str], cand: np.ndarray, depth_max: in
             sc[idx] = (lg[:, 0] - lg[:, 1]).cpu().numpy()
         sc = sc.reshape(len(qs), d)
         for a, i in enumerate(qs):
-            out[i, :d] = cand[i, :d][np.argsort(-sc[a], kind="stable")]
+            o = np.argsort(-sc[a], kind="stable")
+            out[i, :d] = cand[i, :d][o]
+            out_sc[i, :d] = sc[a][o]
         torch.cuda.synchronize()
         t_scoring += time.time() - t
         pairs_done += len(items)
         depths.append(d)
     _log(f"rerank depth min/mean {min(depths) if depths else 0}/{np.mean(depths) if depths else 0:.1f}, "
          f"{pairs_done} pairs in {t_scoring:.0f}s")
+    del model
+    torch.cuda.empty_cache()
+    return out, out_sc
+
+
+def _ql_rescore(qtexts, texts, cand, sc, t_start):
+    """Zero-shot query likelihood: mean log P(conversation | product) under Qwen2.5-1.5B-Instruct, combined with the
+    reranker score (z-scored within the top QL_DEPTH) and used to re-sort those items. Stops when the time budget is used."""
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    tok = AutoTokenizer.from_pretrained(QL_MODEL)
+    model = AutoModelForCausalLM.from_pretrained(QL_MODEL, dtype=torch.bfloat16).cuda().eval()
+    K, nq, chunk = QL_DEPTH, len(qtexts), 8
+    out = cand.copy()
+    done, t_used = 0, 0.0
+    todo = [i for i in range(nq) if sc[i, K - 1] > -1e8]  # only dialogues whose top-K were reranked
+    for s in range(0, len(todo), chunk):
+        avail = BUDGET_S - (time.time() - t_start) - 0.5 * SAFETY_S
+        per_chunk = (t_used / done) * chunk if done else 0.0
+        if avail < per_chunk * 1.2 + 5:
+            break  # out of time: remaining queries keep the reranker order
+        t = time.time()
+        qs = todo[s:s + chunk]
+        seqs, spans = [], []
+        for i in qs:
+            qi = tok.encode(qtexts[i], add_special_tokens=False)
+            for j in range(K):
+                pi = tok.encode(_QL_HEAD.format(doc=texts[cand[i, j]][:RERANK_DOC_CHARS]), add_special_tokens=False)
+                seqs.append(pi + qi)
+                spans.append((len(pi), len(qi)))
+        lp_mean = np.zeros(len(seqs), dtype=np.float32)
+        order = np.argsort([len(x) for x in seqs])
+        for b in range(0, len(order), 8):
+            idx = order[b:b + 8]
+            L = max(len(seqs[k]) for k in idx)
+            ids = torch.full((len(idx), L), tok.pad_token_id, dtype=torch.long)
+            att = torch.zeros((len(idx), L), dtype=torch.long)
+            for r, k in enumerate(idx):
+                ids[r, :len(seqs[k])] = torch.tensor(seqs[k])
+                att[r, :len(seqs[k])] = 1
+            ids, att = ids.cuda(), att.cuda()
+            with torch.inference_mode():
+                h = model.model(input_ids=ids, attention_mask=att).last_hidden_state
+                for r, k in enumerate(idx):
+                    lp, lq = spans[k]
+                    lg = model.lm_head(h[r, lp - 1:lp + lq - 1]).float()
+                    lps = torch.log_softmax(lg, -1).gather(1, ids[r, lp:lp + lq].unsqueeze(1)).squeeze(1)
+                    lp_mean[k] = lps.mean().item()
+        lp_mean = lp_mean.reshape(len(qs), K)
+        for a, i in enumerate(qs):
+            r = sc[i, :K]
+            z = lambda x: (x - x.mean()) / (x.std() + 1e-6)
+            comb = z(r) + QL_WEIGHT * z(lp_mean[a])
+            out[i, :K] = cand[i, :K][np.argsort(-comb, kind="stable")]
+        torch.cuda.synchronize()
+        t_used += time.time() - t
+        done += len(qs)
+    _log(f"query likelihood applied to {done}/{len(todo)} queries in {t_used:.0f}s")
     del model
     torch.cuda.empty_cache()
     return out
@@ -218,8 +288,14 @@ def retrieve_and_rerank(
 
     depth = min(RERANK_DEPTH, n)
     if depth > 0:
-        cand = _rerank(qtexts, texts, cand, depth, t0)
+        cand, rr_sc = _rerank(qtexts, texts, cand, depth, t0, RERANK_SHARE * BUDGET_S)
         _log(f"rerank done {time.time() - t0:.0f}s {_peak()}")
+        if USE_QL and 2 <= QL_DEPTH <= depth:
+            try:
+                cand = _ql_rescore(qtexts, texts, cand, rr_sc, t0)
+                _log(f"query likelihood done {time.time() - t0:.0f}s {_peak()}")
+            except Exception as exc:  # optional stage (e.g. base model not downloadable): keep the reranker order
+                _log(f"query likelihood skipped: {type(exc).__name__}: {exc}")
 
     results: list[dict[str, Any]] = [
         {"qid": q["qid"], "ranked_pids": [pids[j] for j in cand[i, :top_k]]}
